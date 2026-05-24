@@ -25,7 +25,7 @@ services:
     env: docker
     region: oregon
     plan: free
-    dockerfilePath: ./api-gateway/Dockerfile
+    dockerfile: ./api-gateway/Dockerfile
     envVars:
       - key: DATABASE_URL
         fromDatabase:
