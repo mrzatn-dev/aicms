@@ -19,15 +19,10 @@ services:
     env: docker
     region: oregon
     plan: free
-    rootDir: api-gateway
-    dockerfile: ./Dockerfile
+    dockerfile: ./api-gateway/Dockerfile
     envVars:
       - key: DB_HOST
-        fromDatabase:
-          name: cms-postgres
-          property: host
-      - key: REDIS_HOST
-        value: redis-host
+        value: localhost
       - key: DEBUG
         value: "false"
     autoDeploy: true
