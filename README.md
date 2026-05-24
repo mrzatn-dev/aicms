@@ -112,8 +112,9 @@ docker compose up --build
    - **Homepage URL:** your site root, e.g. `https://your-frontend.onrender.com`
    - **Authorization callback URL:** `https://your-api.onrender.com/api/auth/callback/github`
    - For local dev, add a second callback: `http://localhost:8000/api/auth/callback/github`
-3. **Google Cloud Console** — Authorized redirect URI:
-   - `https://your-api.onrender.com/api/auth/callback/google`
+3. **Google Cloud Console**:
+   - **Authorized JavaScript origins:** `https://your-app.onrender.com`
+   - **Authorized redirect URI:** `https://your-app.onrender.com/api/auth/callback/google`
 4. Environment variables on **auth-service**:
    - `OAUTH_API_BASE_URL=https://your-api.onrender.com` (must match GitHub callback host)
    - `OAUTH_REDIRECT_URI=https://your-frontend.onrender.com/oauth/callback`

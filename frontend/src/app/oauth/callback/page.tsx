@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { getApiBaseUrl } from '@/lib/oauth';
 import { Sparkles, Loader2 } from 'lucide-react';
 
 function OAuthCallbackContent() {
@@ -22,7 +23,7 @@ function OAuthCallbackContent() {
     if (token) {
       api.setToken(token);
 
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/profile`, {
+      fetch(`${getApiBaseUrl()}/api/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())

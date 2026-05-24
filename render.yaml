@@ -10,9 +10,13 @@ services:
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: https://aicms-9kw6.onrender.com
-        sync: false
+      - key: API_PROXY_TARGET
+        fromService:
+          type: web
+          name: cms-api-gateway
+          envVarKey: RENDER_EXTERNAL_URL
       - key: OAUTH_REDIRECT_URI
-        sync: false
+        value: https://aicms-9kw6.onrender.com/oauth/callback
     healthCheckPath: /
     autoDeploy: true
 
@@ -27,6 +31,18 @@ services:
         value: localhost
       - key: DEBUG
         value: "false"
+      - key: OAUTH_API_BASE_URL
+        value: https://aicms-9kw6.onrender.com
+      - key: OAUTH_REDIRECT_URI
+        value: https://aicms-9kw6.onrender.com/oauth/callback
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
     autoDeploy: true
 
 databases:
