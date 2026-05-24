@@ -1,0 +1,238 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Mail, Lock, Eye, EyeOff, Sparkles, Zap, Shield, Globe, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { api } from '@/lib/api';
+
+const FEATURES = [
+  { icon: Zap, label: 'AI-анализ контента за секунды' },
+  { icon: Shield, label: 'Безопасная микросервисная архитектура' },
+  { icon: Globe, label: 'Мультиязычный интерфейс и API' },
+];
+
+const TRUSTED = ['FastAPI', 'Next.js', 'PostgreSQL', 'OpenAI', 'Docker', 'Redis'];
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const result = await api.login(email, password);
+      api.setToken(result.access_token);
+      localStorage.setItem('user', JSON.stringify(result.user));
+      router.push('/workspace');
+    } catch (err: any) {
+      setError(err.message || 'Ошибка входа');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuth = (provider: 'google' | 'github') => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/${provider}`;
+  };
+
+  return (
+    <div className="auth-split-root">
+      {/* ─── LEFT: Form Panel ─── */}
+      <div className="auth-split-left">
+        <div className="auth-form-inner">
+          {/* Logo */}
+          <Link href="/" className="auth-logo">
+            <div className="auth-logo-icon">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <span className="auth-logo-text">AI<span>CMS</span></span>
+          </Link>
+
+          <div className="auth-form-body">
+            <h1 className="auth-heading">Войти в аккаунт</h1>
+
+            {error && (
+              <div className="auth-error">
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="auth-fields">
+              {/* Email */}
+              <div className="auth-field-group">
+                <label className="auth-label" htmlFor="login-email">Email</label>
+                <div className="auth-input-wrap">
+                  <Mail className="auth-input-icon" />
+                  <input
+                    id="login-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    required
+                    className="auth-input auth-input--icon-left"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="auth-field-group">
+                <div className="auth-label-row">
+                  <label className="auth-label" htmlFor="login-password">Пароль</label>
+                  <Link href="/forgot-password" className="auth-forgot">Забыли пароль?</Link>
+                </div>
+                <div className="auth-input-wrap">
+                  <Lock className="auth-input-icon" />
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="auth-input auth-input--icon-left auth-input--icon-right"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="auth-eye-btn"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                id="login-submit-btn"
+                type="submit"
+                disabled={loading}
+                className="auth-submit-btn"
+              >
+                {loading ? (
+                  <span className="auth-spinner" />
+                ) : (
+                  <>Войти <ArrowRight className="w-4 h-4 ml-1" /></>
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="auth-divider">
+              <span>или</span>
+            </div>
+
+            {/* OAuth */}
+            <div className="auth-oauth-stack">
+              <button
+                id="oauth-google-btn"
+                type="button"
+                onClick={() => handleOAuth('google')}
+                className="auth-oauth-btn"
+              >
+                {/* Google SVG */}
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M17.64 9.20455C17.64 8.56637 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z" fill="#4285F4"/>
+                  <path d="M9 18C11.43 18 13.4673 17.1941 14.9564 15.8195L12.0477 13.5614C11.2418 14.1014 10.2109 14.4204 9 14.4204C6.65591 14.4204 4.67182 12.8373 3.96409 10.71H0.957275V13.0418C2.43818 15.9832 5.48182 18 9 18Z" fill="#34A853"/>
+                  <path d="M3.96409 10.71C3.78409 10.17 3.68182 9.59318 3.68182 9C3.68182 8.40682 3.78409 7.83 3.96409 7.29V4.95818H0.957275C0.347727 6.17318 0 7.54773 0 9C0 10.4523 0.347727 11.8268 0.957275 13.0418L3.96409 10.71Z" fill="#FBBC05"/>
+                  <path d="M9 3.57955C10.3214 3.57955 11.5077 4.03364 12.4405 4.92545L15.0218 2.34409C13.4632 0.891818 11.4259 0 9 0C5.48182 0 2.43818 2.01682 0.957275 4.95818L3.96409 7.29C4.67182 5.16273 6.65591 3.57955 9 3.57955Z" fill="#EA4335"/>
+                </svg>
+                Войти через Google
+              </button>
+
+              <button
+                id="oauth-github-btn"
+                type="button"
+                onClick={() => handleOAuth('github')}
+                className="auth-oauth-btn"
+              >
+                {/* GitHub SVG */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+                </svg>
+                Войти через GitHub
+              </button>
+            </div>
+
+            <p className="auth-switch-text">
+              Нет аккаунта?{' '}
+              <Link href="/register" className="auth-switch-link">Зарегистрироваться</Link>
+            </p>
+          </div>
+
+          <p className="auth-terms">
+            Используя сервис, вы соглашаетесь с{' '}
+            <a href="#" className="auth-terms-link">Условиями использования</a>{' '}
+            и{' '}
+            <a href="#" className="auth-terms-link">Политикой конфиденциальности</a>
+          </p>
+        </div>
+      </div>
+
+      {/* ─── RIGHT: Dark Panel ─── */}
+      <div className="auth-split-right">
+        {/* Globe decoration */}
+        <div className="auth-globe-wrap">
+          <div className="auth-globe">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="auth-globe-ring" style={{ '--ring-i': i } as any} />
+            ))}
+            <div className="auth-globe-center">
+              <Sparkles className="w-8 h-8 text-white/80" />
+            </div>
+          </div>
+          <p className="auth-globe-label">AI-POWERED CMS PLATFORM</p>
+        </div>
+
+        <div className="auth-right-content">
+          <h2 className="auth-right-heading">
+            УПРАВЛЯЙ КОНТЕНТОМ{' '}
+            С ПОМОЩЬЮ ИИ –{' '}
+            <span className="auth-right-accent">БЫСТРО</span>{' '}
+            И{' '}
+            <span className="auth-right-accent">УМНО</span>
+          </h2>
+
+          <div className="auth-feature-chips">
+            {FEATURES.map(({ icon: Icon, label }) => (
+              <div key={label} className="auth-feature-chip">
+                <Icon className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="auth-trusted">
+          <p className="auth-trusted-label">
+            <span className="auth-trusted-arrow">▶</span>
+            Построено на надёжных технологиях
+            <span className="auth-trusted-arrow">◀</span>
+          </p>
+          <div className="auth-trusted-grid">
+            {TRUSTED.map((tech) => (
+              <div key={tech} className="auth-trusted-item">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                {tech}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="auth-right-footer">
+          Нужна помощь?{' '}
+          <a href="mailto:support@aicms.local" className="auth-right-footer-link">
+            Связаться с поддержкой
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
