@@ -109,8 +109,6 @@ services:
       JWT_SECRET_KEY: super-secret-diploma-key-2024
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       OAUTH_REDIRECT_URI: ${OAUTH_REDIRECT_URI:-http://localhost:3000/oauth/callback}
       OAUTH_API_BASE_URL: ${OAUTH_API_BASE_URL:-http://localhost:8000}
     ports:
