@@ -96,7 +96,7 @@ services:
   auth-service:
     build:
       context: .
-      dockerfile: services/auth-service/Dockerfile
+      dockerfile: services/auth_service/Dockerfile
     container_name: cms-auth-service
     environment:
       DB_HOST: postgres

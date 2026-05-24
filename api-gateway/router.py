@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 # Service URL mapping
 SERVICE_MAP = {
-    "auth": "http://auth-service:8001",
     "content": "http://content-service:8002",
     "validation": "http://validation-service:8003",
     "ai": "http://ai-service:8004",
