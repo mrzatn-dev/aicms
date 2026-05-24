@@ -3,8 +3,8 @@ FROM node:20-alpine AS base
 # Dependencies
 FROM base AS deps
 WORKDIR /app
-COPY package.json ./
-RUN npm install
+COPY package*.json ./
+RUN npm ci
 
 # Build
 FROM base AS builder
