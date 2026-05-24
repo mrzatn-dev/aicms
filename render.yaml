@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: cms-frontend
+    env: docker
+    region: oregon
+    plan: free
+    rootDir: frontend
+    dockerfile: ./Dockerfile
+    dockerCommand: npm run start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://your-api-domain.onrender.com
+        sync: false
+    healthCheckPath: /
+    autoDeploy: true
+
+  - type: web
+    name: cms-api-gateway
+    env: docker
+    region: oregon
+    plan: free
+    rootDir: api-gateway
+    dockerfile: ./Dockerfile
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: cms-postgres
+          property: host
+      - key: REDIS_HOST
+        value: redis-host
+      - key: DEBUG
+        value: "false"
+    autoDeploy: true
+
+databases:
+  - name: cms-postgres
+    databaseName: cms_db
+    user: postgres
+    region: oregon
+    plan: free
