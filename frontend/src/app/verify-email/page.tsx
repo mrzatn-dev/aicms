@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Sparkles, CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react';
 
 type Status = 'loading' | 'success' | 'error';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
@@ -29,7 +29,6 @@ export default function VerifyEmailPage() {
         const data = await res.json();
         if (res.ok) {
           setStatus('success');
-          // Auto-redirect after 3s
           setTimeout(() => router.push('/login'), 3000);
         } else {
           setStatus('error');
@@ -45,6 +44,63 @@ export default function VerifyEmailPage() {
   }, [token, router]);
 
   return (
+    <div className="auth-form-body auth-verify-body">
+      {status === 'loading' && (
+        <>
+          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+          <h1 className="auth-heading">Проверяем ссылку…</h1>
+          <p className="auth-verify-desc">Подождите, идёт подтверждение email</p>
+        </>
+      )}
+
+      {status === 'success' && (
+        <>
+          <div className="auth-verify-icon-wrap" style={{ background: 'linear-gradient(135deg,rgba(52,211,153,.15),rgba(16,185,129,.08))' }}>
+            <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+          </div>
+          <h1 className="auth-heading">Email подтверждён!</h1>
+          <p className="auth-verify-desc">
+            Ваш аккаунт успешно активирован.<br />
+            Перенаправляем на страницу входа…
+          </p>
+          <Link href="/login" className="auth-submit-btn" style={{ display: 'flex', marginTop: '1.5rem' }}>
+            Войти сейчас <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
+        </>
+      )}
+
+      {status === 'error' && (
+        <>
+          <div className="auth-verify-icon-wrap" style={{ background: 'rgba(239,68,68,.08)', border: '1.5px solid rgba(239,68,68,.2)' }}>
+            <XCircle className="w-10 h-10 text-red-500" />
+          </div>
+          <h1 className="auth-heading">Ошибка подтверждения</h1>
+          <p className="auth-verify-desc">{message}</p>
+          <div className="auth-verify-tips">
+            <p className="auth-verify-tip">🔁 Попробуйте зарегистрироваться заново</p>
+            <p className="auth-verify-tip">⏱ Ссылка действительна 24 часа</p>
+          </div>
+          <Link href="/register" className="auth-submit-btn" style={{ display: 'flex', marginTop: '1.5rem' }}>
+            Зарегистрироваться снова <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
+        </>
+      )}
+    </div>
+  );
+}
+
+function VerifyEmailFallback() {
+  return (
+    <div className="auth-form-body auth-verify-body">
+      <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+      <h1 className="auth-heading">Проверяем ссылку…</h1>
+      <p className="auth-verify-desc">Подождите, идёт подтверждение email</p>
+    </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
     <div className="auth-split-root">
       <div className="auth-split-left">
         <div className="auth-form-inner">
@@ -55,52 +111,12 @@ export default function VerifyEmailPage() {
             <span className="auth-logo-text">AI<span>CMS</span></span>
           </Link>
 
-          <div className="auth-form-body auth-verify-body">
-            {status === 'loading' && (
-              <>
-                <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
-                <h1 className="auth-heading">Проверяем ссылку…</h1>
-                <p className="auth-verify-desc">Подождите, идёт подтверждение email</p>
-              </>
-            )}
-
-            {status === 'success' && (
-              <>
-                <div className="auth-verify-icon-wrap" style={{ background: 'linear-gradient(135deg,rgba(52,211,153,.15),rgba(16,185,129,.08))' }}>
-                  <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-                </div>
-                <h1 className="auth-heading">Email подтверждён!</h1>
-                <p className="auth-verify-desc">
-                  Ваш аккаунт успешно активирован.<br />
-                  Перенаправляем на страницу входа…
-                </p>
-                <Link href="/login" className="auth-submit-btn" style={{ display: 'flex', marginTop: '1.5rem' }}>
-                  Войти сейчас <ArrowRight className="w-4 h-4 ml-1" />
-                </Link>
-              </>
-            )}
-
-            {status === 'error' && (
-              <>
-                <div className="auth-verify-icon-wrap" style={{ background: 'rgba(239,68,68,.08)', border: '1.5px solid rgba(239,68,68,.2)' }}>
-                  <XCircle className="w-10 h-10 text-red-500" />
-                </div>
-                <h1 className="auth-heading">Ошибка подтверждения</h1>
-                <p className="auth-verify-desc">{message}</p>
-                <div className="auth-verify-tips">
-                  <p className="auth-verify-tip">🔁 Попробуйте зарегистрироваться заново</p>
-                  <p className="auth-verify-tip">⏱ Ссылка действительна 24 часа</p>
-                </div>
-                <Link href="/register" className="auth-submit-btn" style={{ display: 'flex', marginTop: '1.5rem' }}>
-                  Зарегистрироваться снова <ArrowRight className="w-4 h-4 ml-1" />
-                </Link>
-              </>
-            )}
-          </div>
+          <Suspense fallback={<VerifyEmailFallback />}>
+            <VerifyEmailContent />
+          </Suspense>
         </div>
       </div>
 
-      {/* Right dark panel */}
       <div className="auth-split-right">
         <div className="auth-globe-wrap">
           <div className="auth-globe">
