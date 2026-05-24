@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { getApiBaseUrl } from '@/lib/oauth';
 import { Sparkles, Loader2 } from 'lucide-react';
 
 function OAuthCallbackContent() {
@@ -12,18 +11,11 @@ function OAuthCallbackContent() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const oauthError = searchParams.get('error');
-    if (oauthError) {
-      setError(decodeURIComponent(oauthError));
-      setTimeout(() => router.push('/login'), 3000);
-      return;
-    }
-
     const token = searchParams.get('token');
     if (token) {
       api.setToken(token);
 
-      fetch(`${getApiBaseUrl()}/api/auth/profile`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())

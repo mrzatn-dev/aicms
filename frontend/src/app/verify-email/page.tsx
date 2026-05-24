@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getApiBaseUrl } from '@/lib/oauth';
 import { Sparkles, CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react';
 
 type Status = 'loading' | 'success' | 'error';
@@ -25,7 +24,7 @@ function VerifyEmailContent() {
     const verify = async () => {
       try {
         const res = await fetch(
-          `${getApiBaseUrl()}/api/auth/verify-email?token=${token}`
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/verify-email?token=${token}`
         );
         const data = await res.json();
         if (res.ok) {

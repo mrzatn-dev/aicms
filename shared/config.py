@@ -14,9 +14,6 @@ ROOT_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 class DatabaseSettings(BaseSettings):
     """Database connection settings."""
 
-    DATABASE_URL: str | None = Field(
-        default=None, description="Full database URL (overrides individual fields)"
-    )
     DB_HOST: str = Field(default="localhost", description="PostgreSQL host")
     DB_PORT: int = Field(default=5432, description="PostgreSQL port")
     DB_USER: str = Field(default="postgres", description="PostgreSQL user")
@@ -25,11 +22,6 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        if self.DATABASE_URL:
-            url = self.DATABASE_URL
-            if url.startswith("postgresql://"):
-                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            return url
         return (
             f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -37,11 +29,6 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def database_url_sync(self) -> str:
-        if self.DATABASE_URL:
-            sync_url = self.DATABASE_URL
-            if "+asyncpg" in sync_url:
-                sync_url = sync_url.replace("+asyncpg", "")
-            return sync_url
         return (
             f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -119,7 +106,6 @@ class OAuthSettings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str | None = Field(
         default=None, description="Google OAuth client secret"
     )
-
     OAUTH_REDIRECT_URI: str = Field(
         default="http://localhost:3000/oauth/callback",
         description="Frontend URL receiving JWT after OAuth",

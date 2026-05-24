@@ -9,9 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy shared directory
 COPY shared /app/shared
 
-# Copy auth-service
-COPY services/auth_service /app/services/auth_service
-
 # Copy api-gateway
 COPY api-gateway /app/api-gateway
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, Eye, EyeOff, Sparkles, Zap, Shield, Globe, ArrowRight, CheckCircle2, MailCheck } from 'lucide-react';
 import { api } from '@/lib/api';
+import { getOAuthStartUrl } from '@/lib/oauth';
 
 const FEATURES = [
   { icon: Zap,    label: 'AI-анализ документов и изображений' },
@@ -50,7 +51,7 @@ export default function RegisterPage() {
   };
 
   const handleOAuth = (provider: 'google') => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/${provider}`;
+    window.location.href = getOAuthStartUrl(provider);
   };
 
   /* ── Email verification success screen ── */
@@ -226,7 +227,6 @@ export default function RegisterPage() {
                 </svg>
                 Войти через Google
               </button>
-
             </div>
 
             <p className="auth-switch-text">
