@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Sparkles, Zap, Shield, Globe, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { getOAuthStartUrl } from '@/lib/oauth';
 
 const FEATURES = [
   { icon: Zap, label: 'AI-анализ контента за секунды' },
@@ -40,7 +39,7 @@ export default function LoginPage() {
   };
 
   const handleOAuth = (provider: 'google') => {
-    window.location.href = getOAuthStartUrl(provider);
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/${provider}`;
   };
 
   return (
@@ -147,6 +146,7 @@ export default function LoginPage() {
                 </svg>
                 Войти через Google
               </button>
+
             </div>
 
             <p className="auth-switch-text">

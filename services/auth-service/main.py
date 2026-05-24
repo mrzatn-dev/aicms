@@ -87,6 +87,7 @@ async def oauth_google_start(request: Request):
     return oauth_handlers.redirect_to_google(request)
 
 
+
 @app.get("/callback/google")
 async def oauth_google_callback(
     request: Request,
@@ -99,6 +100,7 @@ async def oauth_google_callback(
     return await oauth_handlers.handle_google_callback(
         code, state, error, auth_service, request
     )
+
 
 
 @app.get("/me", response_model=UserResponse)

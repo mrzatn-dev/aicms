@@ -106,6 +106,7 @@ class OAuthSettings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str | None = Field(
         default=None, description="Google OAuth client secret"
     )
+
     OAUTH_REDIRECT_URI: str = Field(
         default="http://localhost:3000/oauth/callback",
         description="Frontend URL receiving JWT after OAuth",

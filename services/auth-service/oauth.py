@@ -45,31 +45,13 @@ def provider_callback_url(provider: str, request: Request | None = None) -> str:
     return f"{base}/api/auth/callback/{provider}"
 
 
-def _is_local_url(url: str) -> bool:
-    lowered = url.lower()
-    return "localhost" in lowered or "127.0.0.1" in lowered
-
-
-def get_frontend_oauth_callback_url(request: Request | None = None) -> str:
-    """Where to send the user after OAuth (must be reachable from phone/browser)."""
-    configured = (settings.OAUTH_REDIRECT_URI or "").strip().rstrip("/")
-    if configured and not _is_local_url(configured):
-        return configured
-
-    if request is not None:
-        api_base = get_public_api_base_url(request)
-        return f"{api_base}/oauth/callback"
-
-    return configured or "http://localhost:3000/oauth/callback"
-
-
-def frontend_redirect_with_token(token: str, request: Request | None = None) -> str:
-    base = get_frontend_oauth_callback_url(request)
+def frontend_redirect_with_token(token: str) -> str:
+    base = settings.OAUTH_REDIRECT_URI.rstrip("/")
     return f"{base}?token={urllib.parse.quote(token)}"
 
 
-def frontend_redirect_with_error(message: str, request: Request | None = None) -> str:
-    base = get_frontend_oauth_callback_url(request)
+def frontend_redirect_with_error(message: str) -> str:
+    base = settings.OAUTH_REDIRECT_URI.rstrip("/")
     return f"{base}?error={urllib.parse.quote(message)}"
 
 
@@ -175,12 +157,12 @@ async def handle_google_callback(
 ) -> RedirectResponse:
     if error:
         return RedirectResponse(
-            url=frontend_redirect_with_error(error, request),
+            url=frontend_redirect_with_error(error),
             status_code=status.HTTP_302_FOUND,
         )
     if not code or not state:
         return RedirectResponse(
-            url=frontend_redirect_with_error("Missing OAuth code", request),
+            url=frontend_redirect_with_error("Missing OAuth code"),
             status_code=status.HTTP_302_FOUND,
         )
 
@@ -192,7 +174,7 @@ async def handle_google_callback(
         email = profile.get("email")
         if not email:
             return RedirectResponse(
-                url=frontend_redirect_with_error("Google account has no email", request),
+                url=frontend_redirect_with_error("Google account has no email"),
                 status_code=status.HTTP_302_FOUND,
             )
 
@@ -200,16 +182,16 @@ async def handle_google_callback(
         full_name = profile.get("name")
         token_response = await auth_service.oauth_login(email, username_hint, full_name)
         return RedirectResponse(
-            url=frontend_redirect_with_token(token_response.access_token, request),
+            url=frontend_redirect_with_token(token_response.access_token),
             status_code=status.HTTP_302_FOUND,
         )
     except HTTPException as exc:
         return RedirectResponse(
-            url=frontend_redirect_with_error(str(exc.detail), request),
+            url=frontend_redirect_with_error(str(exc.detail)),
             status_code=status.HTTP_302_FOUND,
         )
     except Exception:
         return RedirectResponse(
-            url=frontend_redirect_with_error("Google OAuth failed", request),
+            url=frontend_redirect_with_error("Google OAuth failed"),
             status_code=status.HTTP_302_FOUND,
         )
