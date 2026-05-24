@@ -100,15 +100,11 @@ class JWTSettings(BaseSettings):
 
 
 class OAuthSettings(BaseSettings):
-    """OAuth provider settings (Google, GitHub)."""
+    """OAuth provider settings (Google)."""
 
     GOOGLE_CLIENT_ID: str | None = Field(default=None, description="Google OAuth client ID")
     GOOGLE_CLIENT_SECRET: str | None = Field(
         default=None, description="Google OAuth client secret"
-    )
-    GITHUB_CLIENT_ID: str | None = Field(default=None, description="GitHub OAuth client ID")
-    GITHUB_CLIENT_SECRET: str | None = Field(
-        default=None, description="GitHub OAuth client secret"
     )
     OAUTH_REDIRECT_URI: str = Field(
         default="http://localhost:3000/oauth/callback",

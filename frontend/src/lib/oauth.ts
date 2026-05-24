@@ -29,7 +29,7 @@ export function getApiBaseUrl(): string {
   return configured || 'http://localhost:8000';
 }
 
-export function getOAuthStartUrl(provider: 'google' | 'github'): string {
+export function getOAuthStartUrl(provider: 'google'): string {
   if (typeof window !== 'undefined' && !isLocalHostUrl(window.location.origin)) {
     return `${window.location.origin}/api/auth/${provider}`;
   }

@@ -87,12 +87,6 @@ async def oauth_google_start(request: Request):
     return oauth_handlers.redirect_to_google(request)
 
 
-@app.get("/github")
-async def oauth_github_start(request: Request):
-    """Redirect to GitHub OAuth consent screen."""
-    return oauth_handlers.redirect_to_github(request)
-
-
 @app.get("/callback/google")
 async def oauth_google_callback(
     request: Request,
@@ -103,20 +97,6 @@ async def oauth_google_callback(
 ):
     """Handle Google OAuth callback and redirect to frontend with JWT."""
     return await oauth_handlers.handle_google_callback(
-        code, state, error, auth_service, request
-    )
-
-
-@app.get("/callback/github")
-async def oauth_github_callback(
-    request: Request,
-    code: str | None = None,
-    state: str | None = None,
-    error: str | None = None,
-    auth_service: AuthService = Depends(get_auth_service),
-):
-    """Handle GitHub OAuth callback and redirect to frontend with JWT."""
-    return await oauth_handlers.handle_github_callback(
         code, state, error, auth_service, request
     )
 
