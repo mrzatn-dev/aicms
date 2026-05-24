@@ -25,10 +25,12 @@ services:
     env: docker
     region: oregon
     plan: free
-    dockerfile: ./api-gateway/Dockerfile
+    dockerfilePath: ./api-gateway/Dockerfile
     envVars:
-      - key: DB_HOST
-        value: localhost
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cms-postgres
+          property: connectionString
       - key: DEBUG
         value: "false"
       - key: OAUTH_API_BASE_URL
@@ -38,10 +40,6 @@ services:
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: GITHUB_CLIENT_ID
-        sync: false
-      - key: GITHUB_CLIENT_SECRET
         sync: false
     autoDeploy: true
 
