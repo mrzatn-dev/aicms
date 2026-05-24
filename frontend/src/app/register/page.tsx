@@ -3,137 +3,323 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Mail, Lock, User, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Sparkles, Zap, Shield, Globe, ArrowRight, CheckCircle2, MailCheck } from 'lucide-react';
 import { api } from '@/lib/api';
 
+const FEATURES = [
+  { icon: Zap,    label: 'AI-анализ документов и изображений' },
+  { icon: Shield, label: 'Роли, права и безопасность' },
+  { icon: Globe,  label: 'REST API + микросервисы' },
+];
+
+const TRUSTED = ['FastAPI', 'Next.js', 'PostgreSQL', 'OpenAI', 'Docker', 'Redis'];
+
+type Step = 'form' | 'verify';
+
 export default function RegisterPage() {
-    const router = useRouter();
-    const [form, setForm] = useState({ email: '', username: '', password: '', full_name: '' });
-    const [showPassword, setShowPassword] = useState(false);
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const [step, setStep]         = useState<Step>('form');
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+  const [form, setForm]         = useState({ email: '', username: '', password: '', full_name: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
 
-        try {
-            const result = await api.register(form);
-            api.setToken(result.access_token);
-            localStorage.setItem('user', JSON.stringify(result.user));
-            router.push('/workspace');
-        } catch (err: any) {
-            setError(err.message || 'Registration failed');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const result = await api.register(form);
+      // If backend returns access_token immediately (no email verification yet)
+      if (result.access_token) {
+        api.setToken(result.access_token);
+        localStorage.setItem('user', JSON.stringify(result.user));
+        router.push('/workspace');
+      } else {
+        // Backend requires email confirmation
+        setRegisteredEmail(form.email);
+        setStep('verify');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Ошибка регистрации');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleOAuth = (provider: 'google' | 'github') => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/${provider}`;
+  };
+
+  /* ── Email verification success screen ── */
+  if (step === 'verify') {
     return (
-        <div className="min-h-screen flex items-center justify-center px-6 bg-gradient-to-br from-primary-50 via-white to-violet-50">
-            <div className="absolute top-10 left-10">
-                <Link href="/" className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-xl font-bold">AI<span className="text-primary-600">CMS</span></span>
-                </Link>
+      <div className="auth-split-root">
+        <div className="auth-split-left">
+          <div className="auth-form-inner">
+            <Link href="/" className="auth-logo">
+              <div className="auth-logo-icon">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="auth-logo-text">AI<span>CMS</span></span>
+            </Link>
+
+            <div className="auth-form-body auth-verify-body">
+              <div className="auth-verify-icon-wrap">
+                <MailCheck className="w-10 h-10 text-emerald-500" />
+              </div>
+              <h1 className="auth-heading">Подтвердите email</h1>
+              <p className="auth-verify-desc">
+                Мы отправили письмо на{' '}
+                <strong className="auth-verify-email">{registeredEmail}</strong>.
+                <br />
+                Перейдите по ссылке в письме для активации аккаунта.
+              </p>
+              <div className="auth-verify-tips">
+                <p className="auth-verify-tip">📬 Не видите письмо? Проверьте папку «Спам»</p>
+                <p className="auth-verify-tip">⏱ Ссылка действительна 24 часа</p>
+              </div>
+              <Link href="/login" className="auth-submit-btn" style={{ display: 'flex', marginTop: '1.5rem' }}>
+                Перейти ко входу <ArrowRight className="w-4 h-4 ml-1" />
+              </Link>
             </div>
 
-            <div className="w-full max-w-md animate-slide-up">
-                <div className="card p-8">
-                    <div className="text-center mb-8">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
-                            <UserPlus className="w-7 h-7 text-white" />
-                        </div>
-                        <h1 className="text-2xl font-bold text-surface-900">Create Account</h1>
-                        <p className="text-sm text-surface-700/60 mt-1">Join the AI-powered CMS platform</p>
-                    </div>
-
-                    {error && (
-                        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-surface-700 mb-2">Full Name</label>
-                            <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-700/40" />
-                                <input
-                                    type="text"
-                                    value={form.full_name}
-                                    onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                                    placeholder="John Doe"
-                                    className="input-field !pl-11"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-surface-700 mb-2">Username</label>
-                            <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-700/40" />
-                                <input
-                                    type="text"
-                                    value={form.username}
-                                    onChange={(e) => setForm({ ...form, username: e.target.value })}
-                                    placeholder="johndoe"
-                                    required
-                                    className="input-field !pl-11"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-surface-700 mb-2">Email</label>
-                            <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-700/40" />
-                                <input
-                                    type="email"
-                                    value={form.email}
-                                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    placeholder="john@example.com"
-                                    required
-                                    className="input-field !pl-11"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-surface-700 mb-2">Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-700/40" />
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={form.password}
-                                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                    placeholder="Min 6 characters"
-                                    required
-                                    minLength={6}
-                                    className="input-field !pl-11 !pr-11"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-700/40 hover:text-surface-700"
-                                >
-                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                </button>
-                            </div>
-                        </div>
-
-                        <button type="submit" disabled={loading} className="btn-primary w-full !py-3.5 disabled:opacity-60 !mt-6">
-                            {loading ? 'Creating account...' : 'Create Account'}
-                        </button>
-                    </form>
-
-                    <p className="text-center text-sm text-surface-700/60 mt-6">
-                        Already have an account?{' '}
-                        <Link href="/login" className="text-primary-600 font-medium hover:underline">Sign in</Link>
-                    </p>
-                </div>
-            </div>
+            <p className="auth-terms">
+              Нужна помощь?{' '}
+              <a href="mailto:support@aicms.local" className="auth-terms-link">Написать в поддержку</a>
+            </p>
+          </div>
         </div>
+        <div className="auth-split-right">
+          <RightPanel />
+        </div>
+      </div>
     );
+  }
+
+  /* ── Registration form ── */
+  return (
+    <div className="auth-split-root">
+      {/* ─── LEFT: Form ─── */}
+      <div className="auth-split-left">
+        <div className="auth-form-inner">
+          {/* Logo */}
+          <Link href="/" className="auth-logo">
+            <div className="auth-logo-icon">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <span className="auth-logo-text">AI<span>CMS</span></span>
+          </Link>
+
+          <div className="auth-form-body">
+            <h1 className="auth-heading">Создать аккаунт</h1>
+
+            {error && (
+              <div className="auth-error">
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="auth-fields">
+              {/* First + Last name row */}
+              <div className="auth-name-row">
+                <div className="auth-field-group">
+                  <label className="auth-label" htmlFor="reg-firstname">Имя</label>
+                  <input
+                    id="reg-firstname"
+                    type="text"
+                    value={form.full_name}
+                    onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                    placeholder="Иван"
+                    className="auth-input"
+                  />
+                </div>
+                <div className="auth-field-group">
+                  <label className="auth-label" htmlFor="reg-username">Username</label>
+                  <input
+                    id="reg-username"
+                    type="text"
+                    value={form.username}
+                    onChange={(e) => setForm({ ...form, username: e.target.value })}
+                    placeholder="ivan99"
+                    required
+                    className="auth-input"
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="auth-field-group">
+                <label className="auth-label" htmlFor="reg-email">Email</label>
+                <div className="auth-input-wrap">
+                  <Mail className="auth-input-icon" />
+                  <input
+                    id="reg-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="your@email.com"
+                    required
+                    className="auth-input auth-input--icon-left"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="auth-field-group">
+                <label className="auth-label" htmlFor="reg-password">Пароль</label>
+                <div className="auth-input-wrap">
+                  <Lock className="auth-input-icon" />
+                  <input
+                    id="reg-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="Минимум 6 символов"
+                    required
+                    minLength={6}
+                    className="auth-input auth-input--icon-left auth-input--icon-right"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="auth-eye-btn"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                id="register-submit-btn"
+                type="submit"
+                disabled={loading}
+                className="auth-submit-btn"
+              >
+                {loading ? (
+                  <span className="auth-spinner" />
+                ) : (
+                  <>Зарегистрироваться <ArrowRight className="w-4 h-4 ml-1" /></>
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="auth-divider"><span>или</span></div>
+
+            {/* OAuth */}
+            <div className="auth-oauth-stack">
+              <button
+                id="oauth-google-register-btn"
+                type="button"
+                onClick={() => handleOAuth('google')}
+                className="auth-oauth-btn"
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M17.64 9.20455C17.64 8.56637 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z" fill="#4285F4"/>
+                  <path d="M9 18C11.43 18 13.4673 17.1941 14.9564 15.8195L12.0477 13.5614C11.2418 14.1014 10.2109 14.4204 9 14.4204C6.65591 14.4204 4.67182 12.8373 3.96409 10.71H0.957275V13.0418C2.43818 15.9832 5.48182 18 9 18Z" fill="#34A853"/>
+                  <path d="M3.96409 10.71C3.78409 10.17 3.68182 9.59318 3.68182 9C3.68182 8.40682 3.78409 7.83 3.96409 7.29V4.95818H0.957275C0.347727 6.17318 0 7.54773 0 9C0 10.4523 0.347727 11.8268 0.957275 13.0418L3.96409 10.71Z" fill="#FBBC05"/>
+                  <path d="M9 3.57955C10.3214 3.57955 11.5077 4.03364 12.4405 4.92545L15.0218 2.34409C13.4632 0.891818 11.4259 0 9 0C5.48182 0 2.43818 2.01682 0.957275 4.95818L3.96409 7.29C4.67182 5.16273 6.65591 3.57955 9 3.57955Z" fill="#EA4335"/>
+                </svg>
+                Войти через Google
+              </button>
+
+              <button
+                id="oauth-github-register-btn"
+                type="button"
+                onClick={() => handleOAuth('github')}
+                className="auth-oauth-btn"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+                </svg>
+                Войти через GitHub
+              </button>
+            </div>
+
+            <p className="auth-switch-text">
+              Уже есть аккаунт?{' '}
+              <Link href="/login" className="auth-switch-link">Войти</Link>
+            </p>
+          </div>
+
+          <p className="auth-terms">
+            Создавая аккаунт, вы соглашаетесь с{' '}
+            <a href="#" className="auth-terms-link">Условиями использования</a>{' '}
+            и{' '}
+            <a href="#" className="auth-terms-link">Политикой конфиденциальности</a>
+          </p>
+        </div>
+      </div>
+
+      {/* ─── RIGHT: Dark Panel ─── */}
+      <div className="auth-split-right">
+        <RightPanel />
+      </div>
+    </div>
+  );
+}
+
+/* ── Shared right panel component ── */
+function RightPanel() {
+  return (
+    <>
+      <div className="auth-globe-wrap">
+        <div className="auth-globe">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="auth-globe-ring" style={{ '--ring-i': i } as any} />
+          ))}
+          <div className="auth-globe-center">
+            <Sparkles className="w-8 h-8 text-white/80" />
+          </div>
+        </div>
+        <p className="auth-globe-label">AI-POWERED CMS PLATFORM</p>
+      </div>
+
+      <div className="auth-right-content">
+        <h2 className="auth-right-heading">
+          УПРАВЛЯЙ КОНТЕНТОМ{' '}
+          С ПОМОЩЬЮ ИИ –{' '}
+          <span className="auth-right-accent">БЫСТРО</span>{' '}
+          И{' '}
+          <span className="auth-right-accent">УМНО</span>
+        </h2>
+
+        <div className="auth-feature-chips">
+          {FEATURES.map(({ icon: Icon, label }) => (
+            <div key={label} className="auth-feature-chip">
+              <Icon className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="auth-trusted">
+        <p className="auth-trusted-label">
+          <span className="auth-trusted-arrow">▶</span>
+          Построено на надёжных технологиях
+          <span className="auth-trusted-arrow">◀</span>
+        </p>
+        <div className="auth-trusted-grid">
+          {TRUSTED.map((tech) => (
+            <div key={tech} className="auth-trusted-item">
+              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+              {tech}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="auth-right-footer">
+        Нужна помощь?{' '}
+        <a href="mailto:support@aicms.local" className="auth-right-footer-link">
+          Связаться с поддержкой
+        </a>
+      </p>
+    </>
+  );
 }
