@@ -9,14 +9,8 @@ services:
     dockerCommand: npm run start
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: https://aicms-9kw6.onrender.com
-      - key: API_PROXY_TARGET
-        fromService:
-          type: web
-          name: cms-api-gateway
-          envVarKey: RENDER_EXTERNAL_URL
-      - key: OAUTH_REDIRECT_URI
-        value: https://aicms-9kw6.onrender.com/oauth/callback
+        value: https://your-api-domain.onrender.com
+        sync: false
     healthCheckPath: /
     autoDeploy: true
 
@@ -27,20 +21,10 @@ services:
     plan: free
     dockerfile: ./api-gateway/Dockerfile
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: cms-postgres
-          property: connectionString
+      - key: DB_HOST
+        value: localhost
       - key: DEBUG
         value: "false"
-      - key: OAUTH_API_BASE_URL
-        value: https://aicms-9kw6.onrender.com
-      - key: OAUTH_REDIRECT_URI
-        value: https://aicms-9kw6.onrender.com/oauth/callback
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
     autoDeploy: true
 
 databases:
