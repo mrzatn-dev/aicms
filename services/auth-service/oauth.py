@@ -13,7 +13,7 @@ import urllib.parse
 from typing import Any
 
 import httpx
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 
 from shared.config import settings
@@ -28,8 +28,25 @@ GITHUB_USER_URL = "https://api.github.com/user"
 GITHUB_EMAILS_URL = "https://api.github.com/user/emails"
 
 
-def provider_callback_url(provider: str) -> str:
-    base = settings.OAUTH_API_BASE_URL.rstrip("/")
+def get_public_api_base_url(request: Request | None = None) -> str:
+    """Public API URL used in OAuth redirect_uri (must match provider console)."""
+    configured = (settings.OAUTH_API_BASE_URL or "").strip().rstrip("/")
+    if configured and configured != "http://localhost:8000":
+        return configured
+
+    if request is not None:
+        forwarded_host = request.headers.get("x-forwarded-host")
+        forwarded_proto = request.headers.get("x-forwarded-proto")
+        if forwarded_host:
+            scheme = forwarded_proto or request.url.scheme
+            return f"{scheme}://{forwarded_host}".rstrip("/")
+        return str(request.base_url).rstrip("/")
+
+    return configured or "http://localhost:8000"
+
+
+def provider_callback_url(provider: str, request: Request | None = None) -> str:
+    base = get_public_api_base_url(request)
     return f"{base}/api/auth/callback/{provider}"
 
 
@@ -91,11 +108,11 @@ def _require_github_config() -> None:
         )
 
 
-def redirect_to_google() -> RedirectResponse:
+def redirect_to_google(request: Request) -> RedirectResponse:
     _require_google_config()
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
-        "redirect_uri": provider_callback_url("google"),
+        "redirect_uri": provider_callback_url("google", request),
         "response_type": "code",
         "scope": "openid email profile",
         "access_type": "online",
@@ -106,11 +123,11 @@ def redirect_to_google() -> RedirectResponse:
     return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
 
 
-def redirect_to_github() -> RedirectResponse:
+def redirect_to_github(request: Request) -> RedirectResponse:
     _require_github_config()
     params = {
         "client_id": settings.GITHUB_CLIENT_ID,
-        "redirect_uri": provider_callback_url("github"),
+        "redirect_uri": provider_callback_url("github", request),
         "scope": "user:email",
         "state": _make_state("github"),
     }
@@ -118,7 +135,8 @@ def redirect_to_github() -> RedirectResponse:
     return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
 
 
-async def _exchange_google_code(code: str) -> dict[str, Any]:
+async def _exchange_google_code(code: str, request: Request) -> dict[str, Any]:
+    redirect_uri = provider_callback_url("google", request)
     async with httpx.AsyncClient(timeout=20.0) as client:
         token_resp = await client.post(
             GOOGLE_TOKEN_URL,
@@ -126,7 +144,7 @@ async def _exchange_google_code(code: str) -> dict[str, Any]:
                 "code": code,
                 "client_id": settings.GOOGLE_CLIENT_ID,
                 "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                "redirect_uri": provider_callback_url("google"),
+                "redirect_uri": redirect_uri,
                 "grant_type": "authorization_code",
             },
         )
@@ -155,7 +173,8 @@ async def _exchange_google_code(code: str) -> dict[str, Any]:
         return user_resp.json()
 
 
-async def _exchange_github_code(code: str) -> dict[str, Any]:
+async def _exchange_github_code(code: str, request: Request) -> dict[str, Any]:
+    redirect_uri = provider_callback_url("github", request)
     async with httpx.AsyncClient(timeout=20.0) as client:
         token_resp = await client.post(
             GITHUB_TOKEN_URL,
@@ -163,7 +182,7 @@ async def _exchange_github_code(code: str) -> dict[str, Any]:
                 "code": code,
                 "client_id": settings.GITHUB_CLIENT_ID,
                 "client_secret": settings.GITHUB_CLIENT_SECRET,
-                "redirect_uri": provider_callback_url("github"),
+                "redirect_uri": redirect_uri,
             },
             headers={"Accept": "application/json"},
         )
@@ -221,6 +240,7 @@ async def handle_google_callback(
     state: str | None,
     error: str | None,
     auth_service,
+    request: Request,
 ) -> RedirectResponse:
     if error:
         return RedirectResponse(
@@ -237,7 +257,7 @@ async def handle_google_callback(
     _verify_state(state, "google")
 
     try:
-        profile = await _exchange_google_code(code)
+        profile = await _exchange_google_code(code, request)
         email = profile.get("email")
         if not email:
             return RedirectResponse(
@@ -269,6 +289,7 @@ async def handle_github_callback(
     state: str | None,
     error: str | None,
     auth_service,
+    request: Request,
 ) -> RedirectResponse:
     if error:
         return RedirectResponse(
@@ -285,7 +306,7 @@ async def handle_github_callback(
     _verify_state(state, "github")
 
     try:
-        profile = await _exchange_github_code(code)
+        profile = await _exchange_github_code(code, request)
         email = profile.get("email")
         username_hint = profile.get("login") or email.split("@")[0]
         full_name = profile.get("name")

@@ -9,7 +9,9 @@ services:
     dockerCommand: npm run start
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: https://your-api-domain.onrender.com
+        value: https://aicms-9kw6.onrender.com
+        sync: false
+      - key: OAUTH_REDIRECT_URI
         sync: false
     healthCheckPath: /
     autoDeploy: true

@@ -34,8 +34,13 @@ async def proxy_request(
     if request.query_params:
         url += f"?{request.query_params}"
 
-    # Forward headers
+    # Forward headers; preserve public host for OAuth redirect_uri behind the gateway
     headers = dict(request.headers)
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    forwarded_proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    if forwarded_host:
+        headers["x-forwarded-host"] = forwarded_host
+        headers["x-forwarded-proto"] = forwarded_proto
     headers.pop("host", None)
 
     # Read body if present

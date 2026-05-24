@@ -108,11 +108,18 @@ docker compose up --build
 ### OAuth setup
 
 1. Copy `.env.example` to `.env` and fill `GOOGLE_*`, `GITHUB_*`.
-2. In Google Cloud Console and GitHub OAuth App, set **Authorized redirect URI** to:
-   - `{OAUTH_API_BASE_URL}/api/auth/callback/google`
-   - `{OAUTH_API_BASE_URL}/api/auth/callback/github`
-3. Set `OAUTH_REDIRECT_URI` to your frontend callback, e.g. `https://your-frontend.onrender.com/oauth/callback`.
-4. On Render (or production), set the same variables on **auth-service** (or full `docker compose` stack), plus `NEXT_PUBLIC_API_URL` on the frontend build.
+2. **GitHub OAuth App** (do not put the callback path in Homepage URL):
+   - **Homepage URL:** your site root, e.g. `https://your-frontend.onrender.com`
+   - **Authorization callback URL:** `https://your-api.onrender.com/api/auth/callback/github`
+   - For local dev, add a second callback: `http://localhost:8000/api/auth/callback/github`
+3. **Google Cloud Console** — Authorized redirect URI:
+   - `https://your-api.onrender.com/api/auth/callback/google`
+4. Environment variables on **auth-service**:
+   - `OAUTH_API_BASE_URL=https://your-api.onrender.com` (must match GitHub callback host)
+   - `OAUTH_REDIRECT_URI=https://your-frontend.onrender.com/oauth/callback`
+5. On the **frontend** build: `NEXT_PUBLIC_API_URL=https://your-api.onrender.com`
+
+If `OAUTH_API_BASE_URL` is unset, the auth service uses `X-Forwarded-Host` from the API gateway (Render sets this automatically).
 
 ### Content Service
 | Method | Endpoint | Description |

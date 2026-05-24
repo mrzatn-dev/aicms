@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from contextlib import asynccontextmanager
 from uuid import UUID
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -82,37 +82,43 @@ async def login(
 
 
 @app.get("/google")
-async def oauth_google_start():
+async def oauth_google_start(request: Request):
     """Redirect to Google OAuth consent screen."""
-    return oauth_handlers.redirect_to_google()
+    return oauth_handlers.redirect_to_google(request)
 
 
 @app.get("/github")
-async def oauth_github_start():
+async def oauth_github_start(request: Request):
     """Redirect to GitHub OAuth consent screen."""
-    return oauth_handlers.redirect_to_github()
+    return oauth_handlers.redirect_to_github(request)
 
 
 @app.get("/callback/google")
 async def oauth_google_callback(
+    request: Request,
     code: str | None = None,
     state: str | None = None,
     error: str | None = None,
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """Handle Google OAuth callback and redirect to frontend with JWT."""
-    return await oauth_handlers.handle_google_callback(code, state, error, auth_service)
+    return await oauth_handlers.handle_google_callback(
+        code, state, error, auth_service, request
+    )
 
 
 @app.get("/callback/github")
 async def oauth_github_callback(
+    request: Request,
     code: str | None = None,
     state: str | None = None,
     error: str | None = None,
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """Handle GitHub OAuth callback and redirect to frontend with JWT."""
-    return await oauth_handlers.handle_github_callback(code, state, error, auth_service)
+    return await oauth_handlers.handle_github_callback(
+        code, state, error, auth_service, request
+    )
 
 
 @app.get("/me", response_model=UserResponse)
