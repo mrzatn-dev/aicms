@@ -98,8 +98,21 @@ docker compose up --build
 |--------|----------|-------------|
 | POST | /register | User registration |
 | POST | /login | User login (JWT) |
+| GET | /google | Start Google OAuth |
+| GET | /github | Start GitHub OAuth |
+| GET | /callback/google | Google OAuth callback (via gateway) |
+| GET | /callback/github | GitHub OAuth callback (via gateway) |
 | GET | /me | Current user profile |
 | GET | /users | List users (admin) |
+
+### OAuth setup
+
+1. Copy `.env.example` to `.env` and fill `GOOGLE_*`, `GITHUB_*`.
+2. In Google Cloud Console and GitHub OAuth App, set **Authorized redirect URI** to:
+   - `{OAUTH_API_BASE_URL}/api/auth/callback/google`
+   - `{OAUTH_API_BASE_URL}/api/auth/callback/github`
+3. Set `OAUTH_REDIRECT_URI` to your frontend callback, e.g. `https://your-frontend.onrender.com/oauth/callback`.
+4. On Render (or production), set the same variables on **auth-service** (or full `docker compose` stack), plus `NEXT_PUBLIC_API_URL` on the frontend build.
 
 ### Content Service
 | Method | Endpoint | Description |

@@ -99,7 +99,37 @@ class JWTSettings(BaseSettings):
     model_config = {"env_file": str(ROOT_ENV_FILE), "extra": "ignore"}
 
 
-class AppSettings(DatabaseSettings, RedisSettings, RabbitMQSettings, MinioSettings, JWTSettings):
+class OAuthSettings(BaseSettings):
+    """OAuth provider settings (Google, GitHub)."""
+
+    GOOGLE_CLIENT_ID: str | None = Field(default=None, description="Google OAuth client ID")
+    GOOGLE_CLIENT_SECRET: str | None = Field(
+        default=None, description="Google OAuth client secret"
+    )
+    GITHUB_CLIENT_ID: str | None = Field(default=None, description="GitHub OAuth client ID")
+    GITHUB_CLIENT_SECRET: str | None = Field(
+        default=None, description="GitHub OAuth client secret"
+    )
+    OAUTH_REDIRECT_URI: str = Field(
+        default="http://localhost:3000/oauth/callback",
+        description="Frontend URL receiving JWT after OAuth",
+    )
+    OAUTH_API_BASE_URL: str = Field(
+        default="http://localhost:8000",
+        description="Public API Gateway URL for provider callbacks",
+    )
+
+    model_config = {"env_file": str(ROOT_ENV_FILE), "extra": "ignore"}
+
+
+class AppSettings(
+    DatabaseSettings,
+    RedisSettings,
+    RabbitMQSettings,
+    MinioSettings,
+    JWTSettings,
+    OAuthSettings,
+):
     """Combined application settings for all microservices."""
 
     APP_NAME: str = Field(default="CMS Microservice", description="Application name")

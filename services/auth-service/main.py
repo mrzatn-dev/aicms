@@ -24,6 +24,7 @@ from shared.auth import get_current_user, require_admin
 
 from service import AuthService
 from repository import UserRepository
+import oauth as oauth_handlers
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,40 @@ async def login(
 ):
     """Login and receive JWT token."""
     return await auth_service.login(credentials)
+
+
+@app.get("/google")
+async def oauth_google_start():
+    """Redirect to Google OAuth consent screen."""
+    return oauth_handlers.redirect_to_google()
+
+
+@app.get("/github")
+async def oauth_github_start():
+    """Redirect to GitHub OAuth consent screen."""
+    return oauth_handlers.redirect_to_github()
+
+
+@app.get("/callback/google")
+async def oauth_google_callback(
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Handle Google OAuth callback and redirect to frontend with JWT."""
+    return await oauth_handlers.handle_google_callback(code, state, error, auth_service)
+
+
+@app.get("/callback/github")
+async def oauth_github_callback(
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Handle GitHub OAuth callback and redirect to frontend with JWT."""
+    return await oauth_handlers.handle_github_callback(code, state, error, auth_service)
 
 
 @app.get("/me", response_model=UserResponse)

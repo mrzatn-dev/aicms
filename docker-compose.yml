@@ -107,6 +107,12 @@ services:
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
       JWT_SECRET_KEY: super-secret-diploma-key-2024
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      OAUTH_REDIRECT_URI: ${OAUTH_REDIRECT_URI:-http://localhost:3000/oauth/callback}
+      OAUTH_API_BASE_URL: ${OAUTH_API_BASE_URL:-http://localhost:8000}
     ports:
       - "8001:8001"
     depends_on:
@@ -296,11 +302,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     container_name: cms-frontend
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       - api-gateway
     restart: on-failure

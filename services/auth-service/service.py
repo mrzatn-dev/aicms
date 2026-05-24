@@ -2,7 +2,10 @@
 Auth service business logic.
 """
 
+import re
+import secrets
 import uuid
+
 from fastapi import HTTPException, status
 
 from shared.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse, UserUpdate
@@ -56,6 +59,49 @@ class AuthService:
             access_token=token,
             user=UserResponse.model_validate(user),
         )
+
+    async def oauth_login(
+        self,
+        email: str,
+        username_hint: str,
+        full_name: str | None = None,
+    ) -> TokenResponse:
+        """Find or create a user from an OAuth provider and return JWT."""
+        user = await self.user_repo.get_by_email(email)
+        if user:
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Account is deactivated",
+                )
+        else:
+            username = await self._unique_username(username_hint)
+            random_password = secrets.token_urlsafe(32)
+            user = await self.user_repo.create(
+                email=email,
+                username=username,
+                hashed_password=hash_password(random_password),
+                full_name=full_name,
+            )
+
+        token = create_access_token(
+            user_id=user.id,
+            email=user.email,
+            role=user.role.value,
+        )
+        return TokenResponse(
+            access_token=token,
+            user=UserResponse.model_validate(user),
+        )
+
+    async def _unique_username(self, hint: str) -> str:
+        base = re.sub(r"[^a-zA-Z0-9_]", "", hint.lower())[:40] or "user"
+        candidate = base
+        suffix = 1
+        while await self.user_repo.get_by_username(candidate):
+            candidate = f"{base}{suffix}"
+            suffix += 1
+        return candidate
 
     async def login(self, credentials: UserLogin) -> TokenResponse:
         """Authenticate user and return JWT token."""
