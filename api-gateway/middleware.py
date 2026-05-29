@@ -6,14 +6,14 @@ import time
 import logging
 from collections import defaultdict
 
-from fastapi import Request, Response, HTTPException, status
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from shared.auth import decode_access_token
 
 logger = logging.getLogger(__name__)
 
-# Endpoints that don't require authentication
+# Endpoints that don't require authentication (any method)
 PUBLIC_PATHS = {
     "/health",
     "/services/health",
@@ -22,9 +22,8 @@ PUBLIC_PATHS = {
     "/redoc",
     "/api/auth/register",
     "/api/auth/login",
-    "/api/content",
-    "/api/content/",
-    "/api/ai/chat",
+    "/api/auth/google",
+    "/api/auth/callback/google",
 }
 
 # Paths that are public for GET only
@@ -35,13 +34,16 @@ PUBLIC_GET_PREFIXES = [
 ]
 
 
-class AuthMiddleware:
-    """JWT authentication middleware (not currently applied as global middleware)."""
+class AuthMiddleware(BaseHTTPMiddleware):
+    """JWT authentication middleware for gateway routes."""
 
     @staticmethod
     def is_public_path(path: str, method: str) -> bool:
         """Check if a path is publicly accessible."""
         if path in PUBLIC_PATHS:
+            return True
+
+        if method == "GET" and path in {"/api/content", "/api/categories", "/api/tags"}:
             return True
 
         if method == "GET":
@@ -65,6 +67,26 @@ class AuthMiddleware:
             return decode_access_token(parts[1])
         except Exception:
             return None
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        path = request.url.path
+        if self.is_public_path(path, request.method):
+            return await call_next(request)
+
+        payload = self.verify_token(request.headers.get("Authorization"))
+        if payload is None:
+            return Response(
+                content='{"detail":"Not authenticated"}',
+                status_code=401,
+                media_type="application/json",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        request.state.user = payload
+        return await call_next(request)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

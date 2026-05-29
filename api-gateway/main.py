@@ -57,6 +57,9 @@ app.add_middleware(
 # Add rate limiting middleware
 app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
 
+# Require JWT for protected routes (added last = runs first in the stack)
+app.add_middleware(AuthMiddleware)
+
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
