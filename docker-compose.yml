@@ -106,7 +106,7 @@ services:
       DB_NAME: cms_db
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
-      JWT_SECRET_KEY: super-secret-diploma-key-2024
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       OAUTH_REDIRECT_URI: ${OAUTH_REDIRECT_URI:-http://localhost:3000/oauth/callback}
@@ -135,7 +135,7 @@ services:
       DB_NAME: cms_db
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
-      JWT_SECRET_KEY: super-secret-diploma-key-2024
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
@@ -163,7 +163,7 @@ services:
       DB_NAME: cms_db
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
-      JWT_SECRET_KEY: super-secret-diploma-key-2024
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
     ports:
       - "8003:8003"
     depends_on:
@@ -188,7 +188,7 @@ services:
       DB_NAME: cms_db
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
-      JWT_SECRET_KEY: super-secret-diploma-key-2024
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
     ports:
       - "8004:8004"
@@ -214,7 +214,7 @@ services:
       DB_NAME: cms_db
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
-      JWT_SECRET_KEY: super-secret-diploma-key-2024
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
     ports:
       - "8005:8005"
     depends_on:
@@ -237,7 +237,7 @@ services:
       DB_NAME: cms_db
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
-      JWT_SECRET_KEY: super-secret-diploma-key-2024
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
     ports:
       - "8006:8006"
     depends_on:
@@ -259,7 +259,7 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=cms_db
-      - JWT_SECRET_KEY=super-secret-diploma-key-2024
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production}
       - JWT_ALGORITHM=HS256
       - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -280,7 +280,7 @@ services:
       dockerfile: api-gateway/Dockerfile
     container_name: cms-api-gateway
     environment:
-      JWT_SECRET_KEY: super-secret-diploma-key-2024
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
     ports:
       - "8000:8000"
     depends_on:
