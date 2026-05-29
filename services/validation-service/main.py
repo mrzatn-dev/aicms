@@ -22,7 +22,7 @@ from shared.config import settings
 from shared.database import get_session, init_db, async_session_factory
 from shared.schemas.validation import ValidationRequest, ValidationResponse, ValidationRule
 from shared.broker import broker, VALIDATION_QUEUE, AI_ANALYSIS_QUEUE
-from shared.auth import require_admin
+from shared.auth import require_admin, get_current_user
 
 from service import ValidationService
 
@@ -110,6 +110,7 @@ async def health_check():
 @app.post("/validate", response_model=ValidationResponse)
 async def validate_content(
     request: ValidationRequest,
+    current_user: dict = Depends(get_current_user),
     service: ValidationService = Depends(get_validation_service),
 ):
     """Validate content via REST endpoint."""
@@ -128,7 +129,9 @@ async def get_validation_logs(
 
 
 @app.get("/rules", response_model=list[ValidationRule])
-async def get_validation_rules():
+async def get_validation_rules(
+    current_user: dict = Depends(get_current_user),
+):
     """Get all registered validation rules."""
     return ValidationService.get_rules()
 
