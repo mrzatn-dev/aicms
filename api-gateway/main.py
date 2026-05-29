@@ -22,6 +22,9 @@ from shared.config import as_http_url, settings
 from middleware import AuthMiddleware, RateLimitMiddleware
 from router import register_routes
 
+# Mount auth-service routes directly (no separate service needed on Render)
+from services.auth_service.main import app as auth_app
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -90,7 +93,7 @@ async def check_all_services(request: Request):
         "transcription": f"{as_http_url(settings.TRANSCRIPTION_SERVICE_URL)}/health",
     }
 
-    results = {}
+    results = {"auth": {"status": "healthy", "code": "mounted"}}
     for name, url in services.items():
         try:
             resp = await client.get(url, timeout=5.0)
@@ -101,7 +104,10 @@ async def check_all_services(request: Request):
     return {"services": results}
 
 
-# Register proxy routes
+# Mount auth-service directly
+app.mount("/api/auth", auth_app)
+
+# Register proxy routes for other services
 register_routes(app)
 
 

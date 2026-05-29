@@ -11,13 +11,6 @@ function OAuthCallbackContent() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const oauthError = searchParams.get('error');
-    if (oauthError) {
-      setError(decodeURIComponent(oauthError));
-      setTimeout(() => router.push('/login'), 3000);
-      return;
-    }
-
     const token = searchParams.get('token');
     if (token) {
       api.setToken(token);

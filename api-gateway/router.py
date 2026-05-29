@@ -73,12 +73,7 @@ async def proxy_request(
 
 
 def register_routes(app: FastAPI) -> None:
-    """Register all proxy routes."""
-
-    # ─── Auth Service routes ─────────────────────────────────────────
-    @app.api_route("/api/auth/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-    async def auth_proxy(request: Request, path: str):
-        return await proxy_request(request, SERVICE_MAP["auth"], f"/{path}")
+    """Register all proxy routes for downstream services."""
 
     # ─── Content Service routes ──────────────────────────────────────
     @app.api_route("/api/content/my", methods=["GET"])

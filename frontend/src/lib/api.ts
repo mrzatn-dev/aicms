@@ -2,7 +2,7 @@
  * API Client for communicating with the backend gateway.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { getApiBaseUrl } from './oauth';
 
 interface RequestOptions {
     method?: string;
@@ -11,12 +11,11 @@ interface RequestOptions {
 }
 
 class ApiClient {
-    private baseUrl: string;
     private token: string | null = null;
     private interfaceLanguage: string | null = null;
 
-    constructor(baseUrl: string) {
-        this.baseUrl = baseUrl;
+    private get baseUrl(): string {
+        return getApiBaseUrl();
     }
 
     setToken(token: string | null) {
@@ -392,4 +391,4 @@ class ApiClient {
     }
 }
 
-export const api = new ApiClient(API_URL);
+export const api = new ApiClient();

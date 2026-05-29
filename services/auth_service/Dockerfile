@@ -11,13 +11,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY shared /app/shared
 
 # Copy service
-COPY services/auth-service /app/services/auth-service
+COPY services/auth_service /app/services/auth_service
 
 # Install dependencies
-RUN pip install --default-timeout=100 -r /app/services/auth-service/requirements.txt
+RUN pip install --default-timeout=100 -r /app/services/auth_service/requirements.txt
 
 # Set working directory to service
-WORKDIR /app/services/auth-service
+WORKDIR /app/services/auth_service
 
 # Set Python path to include project root
 ENV PYTHONPATH=/app
