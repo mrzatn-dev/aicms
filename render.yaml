@@ -63,7 +63,7 @@ services:
     runtime: docker
     region: oregon
     plan: starter
-    dockerfilePath: ./services/auth-service/Dockerfile
+    dockerfilePath: ./services/auth_service/Dockerfile
     envVars:
       - key: DATABASE_URL
         fromDatabase:

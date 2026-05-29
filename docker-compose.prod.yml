@@ -133,7 +133,7 @@ services:
   auth-service:
     build:
       context: .
-      dockerfile: services/auth-service/Dockerfile
+      dockerfile: services/auth_service/Dockerfile
     container_name: auth_service_prod
     depends_on:
       postgres:
