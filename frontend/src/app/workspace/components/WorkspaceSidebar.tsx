@@ -69,7 +69,7 @@ export function WorkspaceSidebar({
                     <p className="text-xs font-medium text-surface-700/40 uppercase tracking-wider px-3 mb-2">Основное</p>
                 )}
                 {sidebarItems.filter((item) => item.category === 'main').map((item) => {
-                    if ((item.id === 'support_admin' || item.id === 'system_monitor') && user.role !== 'admin') {
+                    if ((item.id === 'support_admin' || item.id === 'system_monitor' || item.id === 'admin_control') && user.role !== 'admin') {
                         return null;
                     }
                     const isActive = activeTab === item.id;

@@ -17,7 +17,7 @@ from fastapi import FastAPI, Request, Response, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from shared.config import settings
+from shared.config import as_http_url, settings
 
 from middleware import AuthMiddleware, RateLimitMiddleware
 from router import register_routes
@@ -45,10 +45,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.allowed_origins_list,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    allow_methods=settings.CORS_ALLOW_METHODS,
+    allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
 # Add rate limiting middleware
@@ -81,13 +81,13 @@ async def check_all_services(request: Request):
     """Check health of all downstream services."""
     client: httpx.AsyncClient = request.app.state.http_client
     services = {
-        "auth": "http://auth-service:8001/health",
-        "content": "http://content-service:8002/health",
-        "validation": "http://validation-service:8003/health",
-        "ai-analysis": "http://ai-service:8004/health",
-        "analytics": "http://analytics-service:8005/health",
-        "user": "http://user-service:8006/health",
-        "transcription": "http://transcription-service:8007/health",
+        "auth": f"{as_http_url(settings.AUTH_SERVICE_URL)}/health",
+        "content": f"{as_http_url(settings.CONTENT_SERVICE_URL)}/health",
+        "validation": f"{as_http_url(settings.VALIDATION_SERVICE_URL)}/health",
+        "ai-analysis": f"{as_http_url(settings.AI_SERVICE_URL)}/health",
+        "analytics": f"{as_http_url(settings.ANALYTICS_SERVICE_URL)}/health",
+        "user": f"{as_http_url(settings.USER_SERVICE_URL)}/health",
+        "transcription": f"{as_http_url(settings.TRANSCRIPTION_SERVICE_URL)}/health",
     }
 
     results = {}

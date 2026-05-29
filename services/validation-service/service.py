@@ -21,6 +21,7 @@ from shared.schemas.validation import (
 )
 from shared.models.validation_log import ValidationLog
 from shared.models.article import Article, ArticleStatus
+from shared.config import as_http_url, settings
 
 logger = logging.getLogger(__name__)
 
@@ -355,7 +356,7 @@ class ValidationService:
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(
-                    "http://ai-service:8004/validate-content",
+                    f"{as_http_url(settings.AI_SERVICE_URL)}/validate-content",
                     json={"title": title, "content": content}
                 )
                 if response.status_code == 200:

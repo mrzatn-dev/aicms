@@ -7,17 +7,19 @@ import logging
 import httpx
 from fastapi import FastAPI, Request, Response, HTTPException
 
+from shared.config import as_http_url, settings
+
 logger = logging.getLogger(__name__)
 
 # Service URL mapping
 SERVICE_MAP = {
-    "auth": "http://auth-service:8001",
-    "content": "http://content-service:8002",
-    "validation": "http://validation-service:8003",
-    "ai": "http://ai-service:8004",
-    "analytics": "http://analytics-service:8005",
-    "user": "http://user-service:8006",
-    "transcription": "http://transcription-service:8007",
+    "auth": as_http_url(settings.AUTH_SERVICE_URL),
+    "content": as_http_url(settings.CONTENT_SERVICE_URL),
+    "validation": as_http_url(settings.VALIDATION_SERVICE_URL),
+    "ai": as_http_url(settings.AI_SERVICE_URL),
+    "analytics": as_http_url(settings.ANALYTICS_SERVICE_URL),
+    "user": as_http_url(settings.USER_SERVICE_URL),
+    "transcription": as_http_url(settings.TRANSCRIPTION_SERVICE_URL),
 }
 
 
@@ -154,6 +156,18 @@ def register_routes(app: FastAPI) -> None:
     @app.api_route("/api/admin/support/conversations/{path:path}", methods=["GET", "POST", "PUT"])
     async def admin_support_conversation_detail_proxy(request: Request, path: str):
         return await proxy_request(request, SERVICE_MAP["user"], f"/admin/support/conversations/{path}")
+
+    @app.api_route("/api/admin/overview", methods=["GET"])
+    async def admin_overview_proxy(request: Request):
+        return await proxy_request(request, SERVICE_MAP["user"], "/admin/overview")
+
+    @app.api_route("/api/admin/users", methods=["GET"])
+    async def admin_users_proxy(request: Request):
+        return await proxy_request(request, SERVICE_MAP["user"], "/admin/users")
+
+    @app.api_route("/api/admin/files", methods=["GET"])
+    async def admin_files_proxy(request: Request):
+        return await proxy_request(request, SERVICE_MAP["user"], "/admin/files")
 
     # ─── Transcription Service routes ─────────────────────────────────────
     @app.api_route("/api/transcription/transcribe", methods=["POST"])

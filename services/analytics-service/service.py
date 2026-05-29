@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 
 from shared.broker import AI_ANALYSIS_QUEUE, ANALYTICS_QUEUE, VALIDATION_QUEUE
-from shared.config import settings
+from shared.config import as_http_url, settings
 from shared.schemas.analytics import (
     AnalyticsDashboard,
     ContentStats,
@@ -20,14 +20,14 @@ from shared.schemas.analytics import (
 from repository import AnalyticsRepository
 
 SERVICE_HEALTH_TARGETS = {
-    "api-gateway": "http://api-gateway:8000/health",
-    "auth-service": "http://auth-service:8001/health",
-    "content-service": "http://content-service:8002/health",
-    "validation-service": "http://validation-service:8003/health",
-    "ai-service": "http://ai-service:8004/health",
-    "analytics-service": "http://analytics-service:8005/health",
-    "user-service": "http://user-service:8006/health",
-    "transcription-service": "http://transcription-service:8007/health",
+    "api-gateway": f"{as_http_url(settings.API_GATEWAY_URL)}/health",
+    "auth-service": f"{as_http_url(settings.AUTH_SERVICE_URL)}/health",
+    "content-service": f"{as_http_url(settings.CONTENT_SERVICE_URL)}/health",
+    "validation-service": f"{as_http_url(settings.VALIDATION_SERVICE_URL)}/health",
+    "ai-service": f"{as_http_url(settings.AI_SERVICE_URL)}/health",
+    "analytics-service": f"{as_http_url(settings.ANALYTICS_SERVICE_URL)}/health",
+    "user-service": f"{as_http_url(settings.USER_SERVICE_URL)}/health",
+    "transcription-service": f"{as_http_url(settings.TRANSCRIPTION_SERVICE_URL)}/health",
 }
 
 MONITORED_QUEUES = [VALIDATION_QUEUE, AI_ANALYSIS_QUEUE, ANALYTICS_QUEUE]

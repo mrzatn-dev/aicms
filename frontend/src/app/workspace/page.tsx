@@ -11,6 +11,7 @@ import { getWorkspaceCopy } from './i18n';
 import { WorkspaceSidebar } from './components/WorkspaceSidebar';
 import { WorkspaceTopBar } from './components/WorkspaceTopBar';
 import { AudioTab } from './components/tabs/AudioTab';
+import { AdminControlTab } from './components/tabs/AdminControlTab';
 import { ChatTab } from './components/tabs/ChatTab';
 import { CsvTab } from './components/tabs/CsvTab';
 import { DocumentTab } from './components/tabs/DocumentTab';
@@ -25,6 +26,9 @@ import { SystemMonitorTab } from './components/tabs/SystemMonitorTab';
 import { ValidateTab } from './components/tabs/ValidateTab';
 import type {
     ActiveTab,
+    AdminFileItem,
+    AdminOverviewData,
+    AdminUserItem,
     AudioResult,
     ChatMessage,
     CSVResult,
@@ -123,6 +127,19 @@ export default function UnifiedDashboardPage() {
     const [monitorLoading, setMonitorLoading] = useState(false);
     const [systemMonitor, setSystemMonitor] = useState<SystemMonitorData | null>(null);
 
+    const [adminLoading, setAdminLoading] = useState(false);
+    const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+    const [adminFilesLoading, setAdminFilesLoading] = useState(false);
+    const [adminOverview, setAdminOverview] = useState<AdminOverviewData | null>(null);
+    const [adminUsers, setAdminUsers] = useState<AdminUserItem[]>([]);
+    const [adminUsersTotal, setAdminUsersTotal] = useState(0);
+    const [adminFiles, setAdminFiles] = useState<AdminFileItem[]>([]);
+    const [adminFilesTotal, setAdminFilesTotal] = useState(0);
+    const [adminUserSearch, setAdminUserSearch] = useState('');
+    const [adminFileSearch, setAdminFileSearch] = useState('');
+    const [adminUserRoleFilter, setAdminUserRoleFilter] = useState('all');
+    const [adminFileToolFilter, setAdminFileToolFilter] = useState('all');
+
     const [supportLoading, setSupportLoading] = useState(false);
     const [supportItems, setSupportItems] = useState<SupportConversationListItem[]>([]);
     const [selectedSupportId, setSelectedSupportId] = useState<string | null>(null);
@@ -211,6 +228,12 @@ export default function UnifiedDashboardPage() {
             void loadSystemMonitor();
         }
     }, [activeTab, user?.role]);
+
+    useEffect(() => {
+        if (activeTab === 'admin_control' && user?.role === 'admin') {
+            void loadAdminControl();
+        }
+    }, [activeTab, user?.role, adminUserSearch, adminFileSearch, adminUserRoleFilter, adminFileToolFilter]);
 
     useEffect(() => {
         if (typeof document === 'undefined') return;
@@ -338,6 +361,75 @@ export default function UnifiedDashboardPage() {
             console.error('Failed to load system monitor:', error);
         } finally {
             setMonitorLoading(false);
+        }
+    };
+
+    const loadAdminControl = async () => {
+        if (user?.role !== 'admin') return;
+        setAdminLoading(true);
+        await Promise.all([
+            loadAdminOverview(),
+            loadAdminUsers(),
+            loadAdminFiles(),
+        ]);
+        setAdminLoading(false);
+    };
+
+    const loadAdminOverview = async () => {
+        if (user?.role !== 'admin') return;
+        try {
+            const response = await api.getAdminOverview();
+            setAdminOverview(response);
+        } catch (error) {
+            console.error('Failed to load admin overview:', error);
+        }
+    };
+
+    const loadAdminUsers = async () => {
+        if (user?.role !== 'admin') return;
+        setAdminUsersLoading(true);
+        try {
+            const response = await api.getAdminUsers(1, 30, adminUserSearch, adminUserRoleFilter);
+            setAdminUsers(response.items || []);
+            setAdminUsersTotal(response.total || 0);
+        } catch (error) {
+            console.error('Failed to load admin users:', error);
+        } finally {
+            setAdminUsersLoading(false);
+        }
+    };
+
+    const loadAdminFiles = async () => {
+        if (user?.role !== 'admin') return;
+        setAdminFilesLoading(true);
+        try {
+            const response = await api.getAdminFiles(1, 30, adminFileToolFilter, adminFileSearch);
+            setAdminFiles(response.items || []);
+            setAdminFilesTotal(response.total || 0);
+        } catch (error) {
+            console.error('Failed to load admin files:', error);
+        } finally {
+            setAdminFilesLoading(false);
+        }
+    };
+
+    const handleAdminUpdateUser = async (userId: string, data: { role?: string; is_active?: boolean }) => {
+        try {
+            await api.updateUser(userId, data);
+            await loadAdminControl();
+        } catch (error) {
+            console.error('Failed to update admin user:', error);
+        }
+    };
+
+    const handleAdminDeleteUser = async (userId: string) => {
+        if (!window.confirm('Удалить пользователя и все связанные данные?')) return;
+
+        try {
+            await api.deleteUser(userId);
+            await loadAdminControl();
+        } catch (error) {
+            console.error('Failed to delete admin user:', error);
         }
     };
 
@@ -983,6 +1075,32 @@ export default function UnifiedDashboardPage() {
                             statistics={statistics}
                             activityLoading={activityLoading}
                             activityItems={activityItems}
+                        />
+                    )}
+
+                    {activeTab === 'admin_control' && user.role === 'admin' && (
+                        <AdminControlTab
+                            locale={locale}
+                            currentUser={user}
+                            loading={adminLoading}
+                            usersLoading={adminUsersLoading}
+                            filesLoading={adminFilesLoading}
+                            overview={adminOverview}
+                            users={adminUsers}
+                            usersTotal={adminUsersTotal}
+                            files={adminFiles}
+                            filesTotal={adminFilesTotal}
+                            userSearch={adminUserSearch}
+                            fileSearch={adminFileSearch}
+                            userRoleFilter={adminUserRoleFilter}
+                            fileToolFilter={adminFileToolFilter}
+                            onUserSearchChange={setAdminUserSearch}
+                            onFileSearchChange={setAdminFileSearch}
+                            onUserRoleFilterChange={setAdminUserRoleFilter}
+                            onFileToolFilterChange={setAdminFileToolFilter}
+                            onRefresh={() => void loadAdminControl()}
+                            onUpdateUser={(userId, data) => void handleAdminUpdateUser(userId, data)}
+                            onDeleteUser={(userId) => void handleAdminDeleteUser(userId)}
                         />
                     )}
 

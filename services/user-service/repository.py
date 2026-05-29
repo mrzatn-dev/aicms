@@ -4,11 +4,12 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Sequence
 
-from sqlalchemy import delete, desc, func, select, text, update
+from sqlalchemy import delete, desc, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.models.user_ai_history import UserAIHistory, AIToolType
+from shared.models.user import User, UserRole
 from shared.models.user_settings import UserSettings
 from shared.models.support_conversation import (
     SupportConversation,
@@ -138,6 +139,174 @@ class UserHistoryRepository:
             .limit(limit)
         )
         return result.scalars().all()
+
+    async def list_all_history(
+        self,
+        skip: int = 0,
+        limit: int = 20,
+        tool_type: AIToolType | None = None,
+    ) -> tuple[Sequence[UserAIHistory], int]:
+        """List all history entries for admins."""
+        query = select(UserAIHistory).options(selectinload(UserAIHistory.user))
+        count_query = select(func.count()).select_from(UserAIHistory)
+
+        if tool_type:
+            query = query.where(UserAIHistory.tool_type == tool_type)
+            count_query = count_query.where(UserAIHistory.tool_type == tool_type)
+
+        total_result = await self.session.execute(count_query)
+        total = total_result.scalar_one()
+        result = await self.session.execute(
+            query.order_by(desc(UserAIHistory.created_at)).offset(skip).limit(limit)
+        )
+        return result.scalars().all(), total
+
+    async def list_uploaded_files(
+        self,
+        skip: int = 0,
+        limit: int = 20,
+        tool_type: AIToolType | None = None,
+        search: str | None = None,
+        user_id: uuid.UUID | None = None,
+    ) -> tuple[Sequence[UserAIHistory], int]:
+        """List uploaded file-backed history entries for admins."""
+        conditions = [UserAIHistory.filename.isnot(None)]
+        if tool_type:
+            conditions.append(UserAIHistory.tool_type == tool_type)
+        if search:
+            conditions.append(UserAIHistory.filename.ilike(f"%{search}%"))
+        if user_id:
+            conditions.append(UserAIHistory.user_id == user_id)
+
+        query = (
+            select(UserAIHistory)
+            .options(selectinload(UserAIHistory.user))
+            .where(*conditions)
+        )
+        count_query = select(func.count()).select_from(UserAIHistory).where(*conditions)
+
+        total_result = await self.session.execute(count_query)
+        total = total_result.scalar_one()
+        result = await self.session.execute(
+            query.order_by(desc(UserAIHistory.created_at)).offset(skip).limit(limit)
+        )
+        return result.scalars().all(), total
+
+    async def count_all(self) -> int:
+        """Count all history entries."""
+        result = await self.session.execute(select(func.count()).select_from(UserAIHistory))
+        return result.scalar_one()
+
+    async def count_all_files(self) -> int:
+        """Count uploaded file-backed history entries."""
+        result = await self.session.execute(
+            select(func.count()).select_from(UserAIHistory).where(UserAIHistory.filename.isnot(None))
+        )
+        return result.scalar_one()
+
+    async def count_all_by_tool(self) -> list[dict]:
+        """Count all history entries by tool type."""
+        result = await self.session.execute(
+            select(
+                UserAIHistory.tool_type,
+                func.count(UserAIHistory.id).label("count"),
+                func.count(UserAIHistory.filename).label("files_count"),
+                func.max(UserAIHistory.created_at).label("last_used"),
+            )
+            .group_by(UserAIHistory.tool_type)
+            .order_by(func.count(UserAIHistory.id).desc())
+        )
+        return [
+            {
+                "tool_type": row.tool_type,
+                "count": row.count,
+                "files_count": row.files_count,
+                "last_used": row.last_used,
+            }
+            for row in result
+        ]
+
+    async def get_user_activity_summary(self, user_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, dict]:
+        """Get aggregate AI activity for selected users."""
+        if not user_ids:
+            return {}
+
+        result = await self.session.execute(
+            select(
+                UserAIHistory.user_id,
+                func.count(UserAIHistory.id).label("analyses_count"),
+                func.count(UserAIHistory.filename).label("files_count"),
+                func.max(UserAIHistory.created_at).label("last_activity_at"),
+            )
+            .where(UserAIHistory.user_id.in_(user_ids))
+            .group_by(UserAIHistory.user_id)
+        )
+        return {
+            row.user_id: {
+                "analyses_count": row.analyses_count,
+                "files_count": row.files_count,
+                "last_activity_at": row.last_activity_at,
+            }
+            for row in result
+        }
+
+
+class AdminUserRepository:
+    """Repository for admin user overview queries."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def list_users(
+        self,
+        skip: int = 0,
+        limit: int = 20,
+        search: str | None = None,
+        role: str | None = None,
+        is_active: bool | None = None,
+    ) -> tuple[Sequence[User], int]:
+        query = select(User)
+        count_query = select(func.count()).select_from(User)
+
+        conditions = []
+        if search:
+            term = f"%{search}%"
+            conditions.append(
+                or_(
+                    User.email.ilike(term),
+                    User.username.ilike(term),
+                    User.full_name.ilike(term),
+                )
+            )
+        if role:
+            conditions.append(User.role == UserRole(role))
+        if is_active is not None:
+            conditions.append(User.is_active == is_active)
+
+        if conditions:
+            query = query.where(*conditions)
+            count_query = count_query.where(*conditions)
+
+        total_result = await self.session.execute(count_query)
+        total = total_result.scalar_one()
+        result = await self.session.execute(
+            query.order_by(desc(User.created_at)).offset(skip).limit(limit)
+        )
+        return result.scalars().all(), total
+
+    async def count_users(self) -> dict[str, int]:
+        total = await self.session.scalar(select(func.count()).select_from(User))
+        active = await self.session.scalar(
+            select(func.count()).select_from(User).where(User.is_active.is_(True))
+        )
+        admins = await self.session.scalar(
+            select(func.count()).select_from(User).where(User.role == UserRole.ADMIN)
+        )
+        return {
+            "total": total or 0,
+            "active": active or 0,
+            "admins": admins or 0,
+        }
 
 
 class UserSettingsRepository:

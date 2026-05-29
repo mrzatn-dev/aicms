@@ -2,7 +2,12 @@
 node_modules/
 __pycache__/
 *.pyc
+
+# Environment files - NEVER commit these!
+.env
+.env.production
 .env.local
+.env.*.local
 
 # Build
 .next/
@@ -12,6 +17,8 @@ dist/
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
@@ -21,3 +28,17 @@ Thumbs.db
 postgres_data/
 redis_data/
 rabbitmq_data/
+
+# Logs
+logs/
+*.log
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Backups
+*.backup
+*.bak
+backups/

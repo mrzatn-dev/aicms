@@ -144,6 +144,19 @@ class ApiClient {
         });
     }
 
+    async updateUser(userId: string, data: { full_name?: string; email?: string; role?: string; is_active?: boolean }) {
+        return this.request<any>(`/api/auth/users/${userId}`, {
+            method: 'PUT',
+            body: data,
+        });
+    }
+
+    async deleteUser(userId: string) {
+        return this.request<void>(`/api/auth/users/${userId}`, {
+            method: 'DELETE',
+        });
+    }
+
     // ─── AI API ───────────────────────────────────────────────
     async chatAI(message: string, history: Array<{ role: string; content: string }>, language = 'ru') {
         return this.request<any>('/api/ai/chat', {
@@ -304,6 +317,33 @@ class ApiClient {
 
     async getSystemMonitor() {
         return this.request<any>('/api/analytics/system-monitor');
+    }
+
+    // ─── Admin Control API ─────────────────────────────────────────
+    async getAdminOverview() {
+        return this.request<any>('/api/admin/overview');
+    }
+
+    async getAdminUsers(page = 1, pageSize = 20, search?: string, role?: string, isActive?: boolean) {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            page_size: pageSize.toString(),
+        });
+        if (search) params.append('search', search);
+        if (role && role !== 'all') params.append('role', role);
+        if (typeof isActive === 'boolean') params.append('is_active', String(isActive));
+        return this.request<any>(`/api/admin/users?${params}`);
+    }
+
+    async getAdminFiles(page = 1, pageSize = 20, toolType?: string, search?: string, userId?: string) {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            page_size: pageSize.toString(),
+        });
+        if (toolType && toolType !== 'all') params.append('tool_type', toolType);
+        if (search) params.append('search', search);
+        if (userId) params.append('user_id', userId);
+        return this.request<any>(`/api/admin/files?${params}`);
     }
 
     // ─── Support API ─────────────────────────────────────────────

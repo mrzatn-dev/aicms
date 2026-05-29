@@ -24,6 +24,7 @@ from shared.broker import broker
 from shared.schemas.history import UserAIHistoryCreate, UserAIHistoryResponse, UserAIHistoryList
 from shared.schemas.settings import UserSettingsUpdate, UserSettingsResponse
 from shared.schemas.statistics import UserStatistics
+from shared.schemas.admin import AdminFileList, AdminOverview, AdminUserList
 from shared.schemas.support import (
     SupportConversationCreate,
     SupportConversationList,
@@ -33,7 +34,7 @@ from shared.schemas.support import (
 )
 
 from service import UserService
-from repository import UserHistoryRepository, UserSettingsRepository, SupportRepository
+from repository import AdminUserRepository, UserHistoryRepository, UserSettingsRepository, SupportRepository
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +79,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.allowed_origins_list,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    allow_methods=settings.CORS_ALLOW_METHODS,
+    allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
 
@@ -90,6 +91,7 @@ def get_user_service(session: AsyncSession = Depends(get_session)) -> UserServic
         UserHistoryRepository(session),
         UserSettingsRepository(session),
         SupportRepository(session),
+        AdminUserRepository(session),
     )
 
 
@@ -177,6 +179,57 @@ async def get_statistics(
 ):
     """Get user statistics."""
     return await user_service.get_statistics(current_user["user_id"])
+
+
+# ── Admin Control Endpoints ──────────────────────────────────────
+
+@app.get("/admin/overview", response_model=AdminOverview)
+async def admin_get_overview(
+    current_user: dict = Depends(require_admin),
+    user_service: UserService = Depends(get_user_service),
+):
+    """Get full system overview for administrators."""
+    return await user_service.admin_get_overview()
+
+
+@app.get("/admin/users", response_model=AdminUserList)
+async def admin_get_users(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: str | None = None,
+    role: str | None = None,
+    is_active: bool | None = None,
+    current_user: dict = Depends(require_admin),
+    user_service: UserService = Depends(get_user_service),
+):
+    """Get all users with activity metadata."""
+    return await user_service.admin_list_users(
+        page=page,
+        page_size=page_size,
+        search=search,
+        role=role,
+        is_active=is_active,
+    )
+
+
+@app.get("/admin/files", response_model=AdminFileList)
+async def admin_get_files(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    tool_type: str | None = None,
+    search: str | None = None,
+    user_id: UUID | None = None,
+    current_user: dict = Depends(require_admin),
+    user_service: UserService = Depends(get_user_service),
+):
+    """Get uploaded files and their AI analysis metadata."""
+    return await user_service.admin_list_files(
+        page=page,
+        page_size=page_size,
+        tool_type=tool_type,
+        search=search,
+        user_id=user_id,
+    )
 
 
 # ── Support Endpoints ──────────────────────────────────────

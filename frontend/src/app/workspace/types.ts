@@ -18,6 +18,7 @@ export type ActiveTab =
     | 'history'
     | 'settings'
     | 'statistics'
+    | 'admin_control'
     | 'system_monitor'
     | 'support'
     | 'support_admin'
@@ -215,6 +216,48 @@ export interface SystemMonitorData {
     services: SystemMonitorServiceItem[];
     queues: SystemMonitorQueueItem[];
     redis: SystemMonitorRedisStatus;
+}
+
+export interface AdminUserItem extends UserInfo {
+    updated_at?: string | null;
+    analyses_count: number;
+    files_count: number;
+    last_activity_at?: string | null;
+}
+
+export interface AdminFileItem {
+    id: string;
+    user_id: string;
+    user_name?: string | null;
+    user_email?: string | null;
+    tool_type: string;
+    filename: string;
+    title?: string | null;
+    file_extension?: string | null;
+    file_size_bytes?: number | null;
+    file_size_kb?: number | null;
+    characteristics: Record<string, unknown>;
+    ai_summary?: string | null;
+    ai_recommendations: string[];
+    warnings: string[];
+    security_verdict?: Record<string, unknown> | null;
+    created_at: string;
+}
+
+export interface AdminToolUsageItem {
+    tool_type: string;
+    count: number;
+    files_count: number;
+    last_used?: string | null;
+}
+
+export interface AdminOverviewData {
+    generated_at: string;
+    totals: Record<string, number>;
+    tool_usage: AdminToolUsageItem[];
+    recent_users: AdminUserItem[];
+    recent_files: AdminFileItem[];
+    ai_insights: string[];
 }
 
 export interface AudioSegment {

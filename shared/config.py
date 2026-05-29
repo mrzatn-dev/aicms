@@ -11,9 +11,18 @@ from pydantic import Field
 ROOT_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
+def as_http_url(value: str) -> str:
+    """Normalize Render host:port references and local URLs into HTTP URLs."""
+    normalized = value.strip().rstrip("/")
+    if normalized.startswith(("http://", "https://")):
+        return normalized
+    return f"http://{normalized}"
+
+
 class DatabaseSettings(BaseSettings):
     """Database connection settings."""
 
+    DATABASE_URL: str | None = Field(default=None, description="Full PostgreSQL connection string")
     DB_HOST: str = Field(default="localhost", description="PostgreSQL host")
     DB_PORT: int = Field(default=5432, description="PostgreSQL port")
     DB_USER: str = Field(default="postgres", description="PostgreSQL user")
@@ -22,6 +31,14 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        if self.DATABASE_URL:
+            if self.DATABASE_URL.startswith("postgresql+asyncpg://"):
+                return self.DATABASE_URL
+            if self.DATABASE_URL.startswith("postgresql://"):
+                return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+            if self.DATABASE_URL.startswith("postgres://"):
+                return self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+            return self.DATABASE_URL
         return (
             f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -29,6 +46,12 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def database_url_sync(self) -> str:
+        if self.DATABASE_URL:
+            if self.DATABASE_URL.startswith("postgresql+asyncpg://"):
+                return self.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
+            if self.DATABASE_URL.startswith("postgres://"):
+                return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+            return self.DATABASE_URL
         return (
             f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -99,6 +122,40 @@ class JWTSettings(BaseSettings):
     model_config = {"env_file": str(ROOT_ENV_FILE), "extra": "ignore"}
 
 
+class CORSSettings(BaseSettings):
+    """CORS configuration for production security."""
+
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:3000,http://localhost:8000",
+        description="Comma-separated list of allowed CORS origins",
+    )
+    CORS_ALLOW_CREDENTIALS: bool = Field(
+        default=True,
+        description="Allow credentials (cookies, headers) in CORS requests",
+    )
+    CORS_ALLOW_METHODS: list[str] = Field(
+        default=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        description="Allowed HTTP methods",
+    )
+    CORS_ALLOW_HEADERS: list[str] = Field(
+        default=[
+            "Content-Type",
+            "Authorization",
+            "X-Interface-Language",
+            "X-Requested-With",
+        ],
+        description="Allowed request headers",
+    )
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        """Parse comma-separated origins into list."""
+        origins = self.CORS_ORIGINS.split(",")
+        return [origin.strip() for origin in origins if origin.strip()]
+
+    model_config = {"env_file": str(ROOT_ENV_FILE), "extra": "ignore"}
+
+
 class OAuthSettings(BaseSettings):
     """OAuth provider settings (Google, GitHub)."""
 
@@ -128,6 +185,7 @@ class AppSettings(
     RabbitMQSettings,
     MinioSettings,
     JWTSettings,
+    CORSSettings,
     OAuthSettings,
 ):
     """Combined application settings for all microservices."""
@@ -136,6 +194,14 @@ class AppSettings(
     APP_VERSION: str = Field(default="1.0.0", description="Application version")
     DEBUG: bool = Field(default=False, description="Debug mode")
     DEEPSEEK_API_KEY: str | None = Field(default=None, description="DeepSeek API Key")
+    API_GATEWAY_URL: str = Field(default="http://api-gateway:8000", description="Internal API Gateway URL")
+    AUTH_SERVICE_URL: str = Field(default="http://auth-service:8001", description="Internal auth service URL")
+    CONTENT_SERVICE_URL: str = Field(default="http://content-service:8002", description="Internal content service URL")
+    VALIDATION_SERVICE_URL: str = Field(default="http://validation-service:8003", description="Internal validation service URL")
+    AI_SERVICE_URL: str = Field(default="http://ai-service:8004", description="Internal AI service URL")
+    ANALYTICS_SERVICE_URL: str = Field(default="http://analytics-service:8005", description="Internal analytics service URL")
+    USER_SERVICE_URL: str = Field(default="http://user-service:8006", description="Internal user service URL")
+    TRANSCRIPTION_SERVICE_URL: str = Field(default="http://transcription-service:8007", description="Internal transcription service URL")
 
     model_config = {"env_file": str(ROOT_ENV_FILE), "extra": "ignore"}
 

@@ -1,37 +1,547 @@
+# Render Blueprint for the full AI CMS environment.
+# Public API/OAuth callback:
+#   https://aicms-9kw6.onrender.com/api/auth/callback/google
+# Frontend:
+#   https://aicms-frontend.onrender.com
+
+databases:
+  - name: aicms-postgres
+    databaseName: cms_db
+    user: cms_user
+    region: oregon
+    plan: free
+
 services:
+  - type: keyvalue
+    name: aicms-redis
+    region: oregon
+    plan: free
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+
+  - type: pserv
+    name: aicms-rabbitmq
+    runtime: image
+    region: oregon
+    plan: starter
+    image:
+      url: docker.io/library/rabbitmq:3-management-alpine
+    disk:
+      name: rabbitmq-data
+      mountPath: /var/lib/rabbitmq
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "5672"
+      - key: RABBITMQ_DEFAULT_USER
+        value: cms
+      - key: RABBITMQ_DEFAULT_PASS
+        generateValue: true
+
+  - type: pserv
+    name: aicms-minio
+    runtime: image
+    region: oregon
+    plan: starter
+    image:
+      url: docker.io/minio/minio:latest
+    dockerCommand: server /data --address ":9000" --console-address ":9001"
+    disk:
+      name: minio-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "9000"
+      - key: MINIO_ROOT_USER
+        value: minioadmin
+      - key: MINIO_ROOT_PASSWORD
+        generateValue: true
+
+  - type: pserv
+    name: auth-service
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./services/auth-service/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicms-postgres
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: port
+      - key: RABBITMQ_HOST
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          property: host
+      - key: RABBITMQ_PORT
+        value: "5672"
+      - key: RABBITMQ_USER
+        value: cms
+      - key: RABBITMQ_PASSWORD
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          envVarKey: RABBITMQ_DEFAULT_PASS
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
+      - key: GOOGLE_CLIENT_ID
+        value: 651418924165-8m35kvr3dvgbevp7gudmc8ius6i3ve62.apps.googleusercontent.com
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: OAUTH_API_BASE_URL
+        value: https://aicms-9kw6.onrender.com
+      - key: OAUTH_REDIRECT_URI
+        value: https://aicms-frontend.onrender.com/oauth/callback
+      - key: DEBUG
+        value: "false"
+
+  - type: pserv
+    name: content-service
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./services/content-service/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicms-postgres
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: port
+      - key: RABBITMQ_HOST
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          property: host
+      - key: RABBITMQ_PORT
+        value: "5672"
+      - key: RABBITMQ_USER
+        value: cms
+      - key: RABBITMQ_PASSWORD
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          envVarKey: RABBITMQ_DEFAULT_PASS
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: pserv
+          name: auth-service
+          envVarKey: JWT_SECRET_KEY
+      - key: CORS_ORIGINS
+        value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
+      - key: MINIO_ENDPOINT
+        fromService:
+          type: pserv
+          name: aicms-minio
+          property: hostport
+      - key: MINIO_ACCESS_KEY
+        value: minioadmin
+      - key: MINIO_SECRET_KEY
+        fromService:
+          type: pserv
+          name: aicms-minio
+          envVarKey: MINIO_ROOT_PASSWORD
+      - key: MINIO_SECURE
+        value: "false"
+      - key: DEBUG
+        value: "false"
+
+  - type: pserv
+    name: validation-service
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./services/validation-service/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicms-postgres
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: port
+      - key: RABBITMQ_HOST
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          property: host
+      - key: RABBITMQ_PORT
+        value: "5672"
+      - key: RABBITMQ_USER
+        value: cms
+      - key: RABBITMQ_PASSWORD
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          envVarKey: RABBITMQ_DEFAULT_PASS
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: pserv
+          name: auth-service
+          envVarKey: JWT_SECRET_KEY
+      - key: AI_SERVICE_URL
+        fromService:
+          type: pserv
+          name: ai-service
+          property: hostport
+      - key: CORS_ORIGINS
+        value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
+      - key: DEBUG
+        value: "false"
+
+  - type: pserv
+    name: ai-service
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./services/ai-service/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicms-postgres
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: port
+      - key: RABBITMQ_HOST
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          property: host
+      - key: RABBITMQ_PORT
+        value: "5672"
+      - key: RABBITMQ_USER
+        value: cms
+      - key: RABBITMQ_PASSWORD
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          envVarKey: RABBITMQ_DEFAULT_PASS
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: pserv
+          name: auth-service
+          envVarKey: JWT_SECRET_KEY
+      - key: CORS_ORIGINS
+        value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEBUG
+        value: "false"
+
+  - type: pserv
+    name: analytics-service
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./services/analytics-service/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicms-postgres
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: port
+      - key: RABBITMQ_HOST
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          property: host
+      - key: RABBITMQ_PORT
+        value: "5672"
+      - key: RABBITMQ_MANAGEMENT_PORT
+        value: "15672"
+      - key: RABBITMQ_USER
+        value: cms
+      - key: RABBITMQ_PASSWORD
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          envVarKey: RABBITMQ_DEFAULT_PASS
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: pserv
+          name: auth-service
+          envVarKey: JWT_SECRET_KEY
+      - key: API_GATEWAY_URL
+        fromService:
+          type: web
+          name: aicms-9kw6
+          property: hostport
+      - key: AUTH_SERVICE_URL
+        fromService:
+          type: pserv
+          name: auth-service
+          property: hostport
+      - key: CONTENT_SERVICE_URL
+        fromService:
+          type: pserv
+          name: content-service
+          property: hostport
+      - key: VALIDATION_SERVICE_URL
+        fromService:
+          type: pserv
+          name: validation-service
+          property: hostport
+      - key: AI_SERVICE_URL
+        fromService:
+          type: pserv
+          name: ai-service
+          property: hostport
+      - key: ANALYTICS_SERVICE_URL
+        fromService:
+          type: pserv
+          name: analytics-service
+          property: hostport
+      - key: USER_SERVICE_URL
+        fromService:
+          type: pserv
+          name: user-service
+          property: hostport
+      - key: TRANSCRIPTION_SERVICE_URL
+        fromService:
+          type: pserv
+          name: transcription-service
+          property: hostport
+      - key: CORS_ORIGINS
+        value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
+      - key: DEBUG
+        value: "false"
+
+  - type: pserv
+    name: user-service
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./services/user-service/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicms-postgres
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: port
+      - key: RABBITMQ_HOST
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          property: host
+      - key: RABBITMQ_PORT
+        value: "5672"
+      - key: RABBITMQ_USER
+        value: cms
+      - key: RABBITMQ_PASSWORD
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          envVarKey: RABBITMQ_DEFAULT_PASS
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: pserv
+          name: auth-service
+          envVarKey: JWT_SECRET_KEY
+      - key: CORS_ORIGINS
+        value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
+      - key: DEBUG
+        value: "false"
+
+  - type: pserv
+    name: transcription-service
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./services/transcription-service/Dockerfile
+    disk:
+      name: transcription-cache
+      mountPath: /tmp/uploads
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicms-postgres
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: port
+      - key: RABBITMQ_HOST
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          property: host
+      - key: RABBITMQ_PORT
+        value: "5672"
+      - key: RABBITMQ_USER
+        value: cms
+      - key: RABBITMQ_PASSWORD
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          envVarKey: RABBITMQ_DEFAULT_PASS
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: pserv
+          name: auth-service
+          envVarKey: JWT_SECRET_KEY
+      - key: CORS_ORIGINS
+        value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DEBUG
+        value: "false"
+
   - type: web
-    name: cms-frontend
-    env: docker
+    name: aicms-9kw6
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./api-gateway/Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicms-postgres
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: aicms-redis
+          property: port
+      - key: RABBITMQ_HOST
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          property: host
+      - key: RABBITMQ_PORT
+        value: "5672"
+      - key: RABBITMQ_USER
+        value: cms
+      - key: RABBITMQ_PASSWORD
+        fromService:
+          type: pserv
+          name: aicms-rabbitmq
+          envVarKey: RABBITMQ_DEFAULT_PASS
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: pserv
+          name: auth-service
+          envVarKey: JWT_SECRET_KEY
+      - key: AUTH_SERVICE_URL
+        fromService:
+          type: pserv
+          name: auth-service
+          property: hostport
+      - key: CONTENT_SERVICE_URL
+        fromService:
+          type: pserv
+          name: content-service
+          property: hostport
+      - key: VALIDATION_SERVICE_URL
+        fromService:
+          type: pserv
+          name: validation-service
+          property: hostport
+      - key: AI_SERVICE_URL
+        fromService:
+          type: pserv
+          name: ai-service
+          property: hostport
+      - key: ANALYTICS_SERVICE_URL
+        fromService:
+          type: pserv
+          name: analytics-service
+          property: hostport
+      - key: USER_SERVICE_URL
+        fromService:
+          type: pserv
+          name: user-service
+          property: hostport
+      - key: TRANSCRIPTION_SERVICE_URL
+        fromService:
+          type: pserv
+          name: transcription-service
+          property: hostport
+      - key: CORS_ORIGINS
+        value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
+      - key: OAUTH_API_BASE_URL
+        value: https://aicms-9kw6.onrender.com
+      - key: DEBUG
+        value: "false"
+
+  - type: web
+    name: aicms-frontend
+    runtime: docker
     region: oregon
     plan: free
     rootDir: frontend
-    dockerfile: ./Dockerfile
-    dockerCommand: npm run start
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: https://aicms-9kw6.onrender.com
-        sync: false
-      - key: OAUTH_REDIRECT_URI
-        sync: false
-    healthCheckPath: /
-    autoDeploy: true
-
-  - type: web
-    name: cms-api-gateway
-    env: docker
-    region: oregon
-    plan: free
-    dockerfile: ./api-gateway/Dockerfile
-    envVars:
-      - key: DB_HOST
-        value: localhost
-      - key: DEBUG
-        value: "false"
-    autoDeploy: true
-
-databases:
-  - name: cms-postgres
-    databaseName: cms_db
-    user: postgres
-    region: oregon
-    plan: free
+      - key: NODE_ENV
+        value: production

@@ -12,6 +12,7 @@ import {
     PieChart,
     Server,
     Settings as SettingsIcon,
+    ShieldCheck,
     User,
 } from 'lucide-react';
 
@@ -26,6 +27,7 @@ export const getSidebarItems = (locale: LocaleCode): SidebarItem[] => {
         { id: 'history', label: copy.sidebar.history, icon: History, gradient: 'from-amber-500 to-yellow-500', category: 'main' },
         { id: 'settings', label: copy.sidebar.settings, icon: SettingsIcon, gradient: 'from-slate-500 to-gray-500', category: 'main' },
         { id: 'statistics', label: copy.sidebar.statistics, icon: PieChart, gradient: 'from-rose-500 to-pink-500', category: 'main' },
+        { id: 'admin_control', label: copy.sidebar.admin_control, icon: ShieldCheck, gradient: 'from-red-500 to-orange-500', category: 'main' },
         { id: 'system_monitor', label: copy.sidebar.system_monitor, icon: Server, gradient: 'from-slate-700 to-slate-500', category: 'main' },
         { id: 'support', label: copy.sidebar.support, icon: Headset, gradient: 'from-sky-500 to-cyan-500', category: 'main' },
         { id: 'support_admin', label: copy.sidebar.support_admin, icon: Headset, gradient: 'from-fuchsia-500 to-violet-500', category: 'main' },

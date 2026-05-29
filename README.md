@@ -50,6 +50,43 @@ docker compose up --build
 - **Email:** admin@cms.local
 - **Password:** admin123
 
+## 🚀 Production Deployment
+
+**⚠️ IMPORTANT:** Before deploying to production, read the production setup documentation!
+
+- **[PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md)** - Complete production deployment guide
+  - Environment configuration
+  - Database setup
+  - SSL/HTTPS configuration
+  - OAuth 2.0 setup (Google & GitHub)
+  - CORS configuration
+  - Docker deployment
+  - Security checklist
+
+- **[OAUTH_SETUP_QUICK.md](./OAUTH_SETUP_QUICK.md)** - Quick OAuth setup cheat sheet
+  - 5-minute Google OAuth setup
+  - 5-minute GitHub OAuth setup
+  - Common errors & fixes
+  - Testing checklist
+
+### Quick Production Steps
+
+1. **Copy production environment file**
+   ```bash
+   cp .env.production .env
+   # Edit .env with your production values
+   ```
+
+2. **Configure OAuth providers**
+   - Google: [PRODUCTION_SETUP.md#google-oauth](./PRODUCTION_SETUP.md#google-oauth-configuration)
+   - GitHub: [PRODUCTION_SETUP.md#github-oauth](./PRODUCTION_SETUP.md#github-oauth-configuration)
+
+3. **Deploy**
+   ```bash
+   # Using production docker-compose
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
 ## Project Structure
 
 ```
