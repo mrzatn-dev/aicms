@@ -29,7 +29,6 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const result = await api.login(email, password);
-      api.setToken(result.access_token);
       localStorage.setItem('user', JSON.stringify(result.user));
       router.push('/workspace');
     } catch (err: any) {

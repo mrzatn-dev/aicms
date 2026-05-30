@@ -10,6 +10,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from shared.auth import decode_access_token
+from shared.cookie_auth import get_token_from_request
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ PUBLIC_PATHS = {
     "/redoc",
     "/api/auth/register",
     "/api/auth/login",
+    "/api/auth/logout",
     "/api/auth/google",
     "/api/auth/callback/google",
 }
@@ -54,17 +56,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return False
 
     @staticmethod
-    def verify_token(authorization: str | None) -> dict | None:
-        """Verify JWT token from Authorization header."""
-        if not authorization:
-            return None
-
-        parts = authorization.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
+    def verify_token(request: Request) -> dict | None:
+        """Verify JWT token from cookie or Authorization header."""
+        token = get_token_from_request(request, request.headers.get("Authorization"))
+        if not token:
             return None
 
         try:
-            return decode_access_token(parts[1])
+            return decode_access_token(token)
         except Exception:
             return None
 
@@ -76,7 +75,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if self.is_public_path(path, request.method):
             return await call_next(request)
 
-        payload = self.verify_token(request.headers.get("Authorization"))
+        payload = self.verify_token(request)
         if payload is None:
             return Response(
                 content='{"detail":"Not authenticated"}',

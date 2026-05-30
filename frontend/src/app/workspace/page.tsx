@@ -156,25 +156,45 @@ export default function UnifiedDashboardPage() {
     const getAvatarStorageKey = (userId: string) => `avatar_prefs_${userId}`;
 
     useEffect(() => {
-        const token = api.getToken();
-        if (!token) {
-            router.push('/login');
-            return;
-        }
+        let cancelled = false;
 
-        const storedUser = localStorage.getItem('user');
-        if (!storedUser) {
-            router.push('/login');
-            return;
-        }
+        (async () => {
+            const hasSession = await api.ensureSession();
+            if (cancelled) return;
+            if (!hasSession) {
+                router.push('/login');
+                return;
+            }
 
-        try {
-            const parsedUser = JSON.parse(storedUser) as UserInfo;
+            const storedUser = localStorage.getItem('user');
+            let parsedUser: UserInfo | null = null;
+
+            if (storedUser) {
+                try {
+                    parsedUser = JSON.parse(storedUser) as UserInfo;
+                } catch {
+                    parsedUser = null;
+                }
+            }
+
+            if (!parsedUser) {
+                try {
+                    parsedUser = await api.getProfile();
+                    localStorage.setItem('user', JSON.stringify(parsedUser));
+                } catch {
+                    router.push('/login');
+                    return;
+                }
+            }
+
+            if (cancelled) return;
+
             setUser(parsedUser);
             setProfileForm({
                 full_name: parsedUser.full_name || '',
                 email: parsedUser.email || '',
             });
+
             const savedAvatar = localStorage.getItem(getAvatarStorageKey(parsedUser.id));
             if (savedAvatar) {
                 try {
@@ -185,9 +205,11 @@ export default function UnifiedDashboardPage() {
                     // Ignore invalid avatar JSON
                 }
             }
-        } catch {
-            router.push('/login');
-        }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
     }, [router]);
 
     useEffect(() => {

@@ -17,6 +17,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 
 from shared.config import settings
+from shared.cookie_auth import set_auth_cookie
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -45,9 +46,14 @@ def provider_callback_url(provider: str, request: Request | None = None) -> str:
     return f"{base}/api/auth/callback/{provider}"
 
 
-def frontend_redirect_with_token(token: str) -> str:
-    base = settings.OAUTH_REDIRECT_URI.rstrip("/")
-    return f"{base}?token={urllib.parse.quote(token)}"
+def frontend_redirect_success(token: str) -> RedirectResponse:
+    """Redirect to frontend after OAuth; JWT is stored in an HttpOnly cookie."""
+    response = RedirectResponse(
+        url=f"{settings.OAUTH_REDIRECT_URI.rstrip('/')}?oauth=success",
+        status_code=status.HTTP_302_FOUND,
+    )
+    set_auth_cookie(response, token)
+    return response
 
 
 def frontend_redirect_with_error(message: str) -> str:
@@ -181,10 +187,7 @@ async def handle_google_callback(
         username_hint = (profile.get("email") or "user").split("@")[0]
         full_name = profile.get("name")
         token_response = await auth_service.oauth_login(email, username_hint, full_name)
-        return RedirectResponse(
-            url=frontend_redirect_with_token(token_response.access_token),
-            status_code=status.HTTP_302_FOUND,
-        )
+        return frontend_redirect_success(token_response.access_token)
     except HTTPException as exc:
         return RedirectResponse(
             url=frontend_redirect_with_error(str(exc.detail)),

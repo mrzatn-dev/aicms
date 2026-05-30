@@ -8,13 +8,14 @@ from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from shared.config import settings
+from shared.cookie_auth import get_token_from_request
 
-# HTTP Bearer scheme
-security = HTTPBearer()
+# HTTP Bearer scheme (optional — cookie auth is preferred in browsers)
+security = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -71,10 +72,19 @@ def decode_access_token(token: str) -> dict:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict:
     """FastAPI dependency: extract and validate current user from JWT token."""
-    payload = decode_access_token(credentials.credentials)
+    auth_header = f"Bearer {credentials.credentials}" if credentials else None
+    token = get_token_from_request(request, auth_header)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    payload = decode_access_token(token)
     return {
         "user_id": uuid.UUID(payload["sub"]),
         "email": payload["email"],
@@ -86,9 +96,24 @@ async def require_admin(
     current_user: dict = Depends(get_current_user),
 ) -> dict:
     """FastAPI dependency: require admin role."""
+    if current_user.get("internal"):
+        return current_user
     if current_user["role"] != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
         )
     return current_user
+
+
+async def require_user_or_internal(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> dict:
+    """Allow authenticated users or trusted internal service callers."""
+    from shared.service_auth import is_valid_internal_token
+
+    if is_valid_internal_token(request):
+        return {"internal": True, "role": "service", "user_id": None, "email": "service@internal"}
+
+    return await get_current_user(request, credentials)

@@ -11,30 +11,39 @@ interface RequestOptions {
 }
 
 class ApiClient {
-    private token: string | null = null;
+    private sessionActive = false;
     private interfaceLanguage: string | null = null;
 
     private get baseUrl(): string {
         return getApiBaseUrl();
     }
 
-    setToken(token: string | null) {
-        this.token = token;
-        if (typeof window !== 'undefined') {
-            if (token) {
-                localStorage.setItem('auth_token', token);
-            } else {
-                localStorage.removeItem('auth_token');
-            }
+    /** @deprecated Auth uses HttpOnly cookies; kept for compatibility. */
+    setToken(_token: string | null) {
+        this.sessionActive = !!_token;
+        if (typeof window !== 'undefined' && !_token) {
+            localStorage.removeItem('auth_token');
         }
     }
 
+    /** @deprecated Auth uses HttpOnly cookies. */
     getToken(): string | null {
-        if (this.token) return this.token;
-        if (typeof window !== 'undefined') {
-            this.token = localStorage.getItem('auth_token');
+        return this.sessionActive ? 'cookie' : null;
+    }
+
+    markSessionActive(active = true) {
+        this.sessionActive = active;
+    }
+
+    async ensureSession(): Promise<boolean> {
+        try {
+            await this.getProfile();
+            this.sessionActive = true;
+            return true;
+        } catch {
+            this.sessionActive = false;
+            return false;
         }
-        return this.token;
     }
 
     setInterfaceLanguage(language: string | null) {
@@ -64,10 +73,6 @@ class ApiClient {
             ...headers,
         };
 
-        const token = this.getToken();
-        if (token) {
-            requestHeaders['Authorization'] = `Bearer ${token}`;
-        }
         const interfaceLanguage = this.getInterfaceLanguage();
         if (interfaceLanguage) {
             requestHeaders['X-Interface-Language'] = interfaceLanguage;
@@ -84,14 +89,18 @@ class ApiClient {
             const response = await fetch(url, {
                 method,
                 headers: requestHeaders,
+                credentials: 'include',
                 body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
             });
 
             if (!response.ok) {
                 const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
                 const errorDetail = error.detail || `HTTP ${response.status}`;
-                if (response.status === 401 && /invalid or expired token/i.test(String(errorDetail))) {
-                    this.setToken(null);
+                if (response.status === 401) {
+                    this.sessionActive = false;
+                    if (typeof window !== 'undefined') {
+                        localStorage.removeItem('user');
+                    }
                     throw new Error('Сессия истекла. Пожалуйста, войдите снова.');
                 }
                 throw new Error(errorDetail);
@@ -110,7 +119,7 @@ class ApiClient {
             method: 'POST',
             body: { email, password },
         });
-        this.setToken(response.access_token);
+        this.markSessionActive(true);
         return response;
     }
 
@@ -124,12 +133,21 @@ class ApiClient {
             method: 'POST',
             body: userData,
         });
-        this.setToken(response.access_token);
+        this.markSessionActive(true);
         return response;
     }
 
     async logout() {
-        this.setToken(null);
+        try {
+            await this.request<any>('/api/auth/logout', { method: 'POST' });
+        } catch {
+            // Clear local session even if the server call fails.
+        }
+        this.markSessionActive(false);
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('user');
+            localStorage.removeItem('auth_token');
+        }
     }
 
     async getProfile() {

@@ -11,25 +11,31 @@ function OAuthCallbackContent() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    if (token) {
-      api.setToken(token);
+    const oauthStatus = searchParams.get('oauth');
+    const oauthError = searchParams.get('error');
 
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
-        .then((user) => {
-          localStorage.setItem('user', JSON.stringify(user));
-          router.push('/workspace');
-        })
-        .catch(() => {
-          router.push('/workspace');
-        });
-    } else {
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError));
+      setTimeout(() => router.push('/login'), 3000);
+      return;
+    }
+
+    if (oauthStatus !== 'success') {
       setError('OAuth авторизация не удалась');
       setTimeout(() => router.push('/login'), 3000);
+      return;
     }
+
+    api.getProfile()
+      .then((user) => {
+        api.markSessionActive(true);
+        localStorage.setItem('user', JSON.stringify(user));
+        router.push('/workspace');
+      })
+      .catch(() => {
+        setError('Не удалось загрузить профиль после OAuth');
+        setTimeout(() => router.push('/login'), 3000);
+      });
   }, [searchParams, router]);
 
   return (

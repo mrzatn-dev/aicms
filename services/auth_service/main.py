@@ -15,12 +15,15 @@ from uuid import UUID
 
 from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
-from shared.database import get_session, init_db
+from shared.database import get_session
 from shared.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse, UserUpdate
 from shared.auth import get_current_user, require_admin
+from shared.service_auth import add_service_auth_middleware
+from shared.cookie_auth import set_auth_cookie, clear_auth_cookie
 
 from service import AuthService
 from repository import UserRepository
@@ -33,7 +36,6 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan: initialize DB on startup."""
     logger.info("Auth Service starting...")
-    await init_db()
     yield
     logger.info("Auth Service shutting down...")
 
@@ -53,9 +55,17 @@ app.add_middleware(
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
+add_service_auth_middleware(app)
+
 
 def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthService:
     return AuthService(UserRepository(session))
+
+
+def _token_response(token_response: TokenResponse) -> JSONResponse:
+    response = JSONResponse(content=token_response.model_dump())
+    set_auth_cookie(response, token_response.access_token)
+    return response
 
 
 @app.get("/health")
@@ -63,22 +73,30 @@ async def health_check():
     return {"status": "healthy", "service": "auth-service"}
 
 
-@app.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """Register a new user."""
-    return await auth_service.register(user_data)
+    return _token_response(await auth_service.register(user_data))
 
 
-@app.post("/login", response_model=TokenResponse)
+@app.post("/login")
 async def login(
     credentials: UserLogin,
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    """Login and receive JWT token."""
-    return await auth_service.login(credentials)
+    """Login and receive JWT token (also set as HttpOnly cookie)."""
+    return _token_response(await auth_service.login(credentials))
+
+
+@app.post("/logout")
+async def logout():
+    """Clear the auth cookie."""
+    response = JSONResponse(content={"detail": "Logged out"})
+    clear_auth_cookie(response)
+    return response
 
 
 @app.get("/google")
