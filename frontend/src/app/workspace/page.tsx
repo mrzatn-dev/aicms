@@ -187,7 +187,10 @@ export default function UnifiedDashboardPage() {
                 }
             }
 
-            if (cancelled) return;
+            if (!parsedUser || cancelled) {
+                if (!parsedUser) router.push('/login');
+                return;
+            }
 
             setUser(parsedUser);
             setProfileForm({
