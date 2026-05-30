@@ -401,6 +401,8 @@ services:
     build:
       context: .
       dockerfile: services/transcription-service/Dockerfile
+      args:
+        INSTALL_LOCAL_WHISPER: "true"
     container_name: transcription_service_prod
     depends_on:
       postgres:

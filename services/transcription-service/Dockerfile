@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+ARG INSTALL_LOCAL_WHISPER=false
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     --no-install-recommends \
@@ -12,8 +14,11 @@ WORKDIR /app
 
 # Copy requirements and install Python dependencies
 COPY services/transcription-service/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-RUN python -c "import faster_whisper; print('faster-whisper ready')"
+COPY services/transcription-service/requirements-local-whisper.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && if [ "$INSTALL_LOCAL_WHISPER" = "true" ]; then \
+         pip install --no-cache-dir -r requirements-local-whisper.txt; \
+       fi
 
 # Copy service code
 COPY services/transcription-service/ .
