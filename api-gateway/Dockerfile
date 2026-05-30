@@ -28,4 +28,4 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "python /app/apply_db.py && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "python /app/apply_db.py && exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
