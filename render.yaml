@@ -552,7 +552,7 @@ services:
         fromService:
           type: web
           name: aicms-9kw6
-          property: hostport
+          envVarKey: RENDER_EXTERNAL_URL
       - key: NEXT_PUBLIC_API_URL
         value: https://aicms-frontend.onrender.com
       - key: NODE_ENV
