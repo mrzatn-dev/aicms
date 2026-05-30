@@ -548,7 +548,9 @@ services:
     healthCheckPath: /
     autoDeploy: true
     envVars:
-      - key: NEXT_PUBLIC_API_URL
+      - key: API_PROXY_TARGET
         value: https://aicms-9kw6.onrender.com
+      - key: NEXT_PUBLIC_API_URL
+        value: https://aicms-frontend.onrender.com
       - key: NODE_ENV
         value: production
