@@ -17,11 +17,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
-from shared.database import get_session, init_db, async_session_factory
+from shared.database import get_session, async_session_factory
 from shared.schemas.analytics import AnalyticsDashboard
 from shared.auth import require_admin
 from shared.broker import broker, ANALYTICS_QUEUE
 from shared.redis_cache import redis_cache
+from shared.service_auth import add_service_auth_middleware
 
 from service import AnalyticsService
 from repository import AnalyticsRepository
@@ -59,7 +60,6 @@ async def handle_analytics_event(message: dict) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Analytics Service starting...")
-    await init_db()
     await redis_cache.connect()
     try:
         await broker.connect()
@@ -87,6 +87,8 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
+add_service_auth_middleware(app)
 
 
 def get_analytics_service(

@@ -9,20 +9,22 @@ import asyncio
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from shared.database import async_session_factory, init_db
+from shared.database import async_session_factory
 from shared.auth import hash_password
 from shared.models.user import User, UserRole
 
 
 async def create_admin():
     """Create an admin user in the database."""
+    from apply_db import main as run_migrations
+
+    run_migrations()
+
     # Admin credentials
     ADMIN_EMAIL = "admin@cms.local"
     ADMIN_USERNAME = "admin"
     ADMIN_PASSWORD = "admin123"
     ADMIN_FULL_NAME = "System Administrator"
-
-    await init_db()
 
     async with async_session_factory() as session:
         try:

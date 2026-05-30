@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
-from shared.database import get_session, init_db
+from shared.database import get_session
 from shared.schemas.article import (
     ArticleCreate,
     ArticleUpdate,
@@ -26,6 +26,7 @@ from shared.schemas.article import (
 )
 from shared.auth import get_current_user, require_admin
 from shared.broker import broker
+from shared.service_auth import add_service_auth_middleware
 
 from service import ContentService
 from repository import ArticleRepository
@@ -37,7 +38,6 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan: initialize DB and message broker."""
     logger.info("Content Service starting...")
-    await init_db()
     try:
         await broker.connect()
     except Exception as e:
@@ -61,6 +61,8 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
+add_service_auth_middleware(app)
 
 
 def get_content_service(

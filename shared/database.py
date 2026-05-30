@@ -46,6 +46,6 @@ async def get_session() -> AsyncSession:
 
 
 async def init_db() -> None:
-    """Create all tables. Use for development only."""
+    """Deprecated: use `python apply_db.py` (Alembic migrations) instead."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

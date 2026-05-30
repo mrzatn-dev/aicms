@@ -19,10 +19,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
-from shared.database import get_session, init_db, async_session_factory
+from shared.database import get_session, async_session_factory
 from shared.schemas.validation import ValidationRequest, ValidationResponse, ValidationRule
 from shared.broker import broker, VALIDATION_QUEUE, AI_ANALYSIS_QUEUE
 from shared.auth import require_admin, get_current_user
+from shared.service_auth import add_service_auth_middleware
 
 from service import ValidationService
 
@@ -68,7 +69,6 @@ async def handle_validation_message(message: dict) -> None:
 async def lifespan(app: FastAPI):
     """Application lifespan."""
     logger.info("Validation Service starting...")
-    await init_db()
     try:
         await broker.connect()
         await broker.consume(VALIDATION_QUEUE, handle_validation_message)
@@ -94,6 +94,8 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
+add_service_auth_middleware(app)
 
 
 def get_validation_service(

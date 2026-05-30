@@ -7,7 +7,6 @@ Runs on port 8007.
 import sys
 import os
 import logging
-import asyncio
 import tempfile
 import subprocess
 from pathlib import Path
@@ -19,12 +18,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
-from shared.database import engine, get_session, init_db
+from shared.database import get_session
 from shared.auth import get_current_user
+from shared.service_auth import add_service_auth_middleware
 from shared.schemas.transcription import (
     TranscriptionCreate, TranscriptionResponse, TranscriptionList, 
     TranscriptionStats, TranscriptionSegment
@@ -38,28 +37,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan: initialize DB on startup."""
+    """Application lifespan."""
     logger.info("Transcription Service starting...")
-    
-    # Retry database connection
-    max_retries = 10
-    for i in range(max_retries):
-        try:
-            await init_db()
-            async with engine.begin() as conn:
-                await conn.execute(text("ALTER TABLE audio_transcriptions ADD COLUMN IF NOT EXISTS is_malicious INTEGER DEFAULT 0"))
-                await conn.execute(text("ALTER TABLE audio_transcriptions ADD COLUMN IF NOT EXISTS safety_score DOUBLE PRECISION"))
-                await conn.execute(text("ALTER TABLE audio_transcriptions ADD COLUMN IF NOT EXISTS safety_summary TEXT"))
-                await conn.execute(text("ALTER TABLE audio_transcriptions ADD COLUMN IF NOT EXISTS safety_categories JSON"))
-            logger.info("Database connected successfully")
-            break
-        except Exception as e:
-            logger.warning(f"Database connection attempt {i+1}/{max_retries} failed: {e}")
-            if i == max_retries - 1:
-                logger.error("Failed to connect to database after all retries")
-                raise
-            await asyncio.sleep(5)
-    
     yield
     logger.info("Transcription Service shutting down...")
 
@@ -78,6 +57,8 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
+add_service_auth_middleware(app)
 
 
 def get_transcription_service(session: AsyncSession = Depends(get_session)) -> TranscriptionService:

@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY shared /app/shared
+COPY migrations /app/migrations
+COPY scripts /app/scripts
+COPY alembic.ini apply_db.py /app/
+
+RUN pip install --no-cache-dir \
+    sqlalchemy[asyncio]==2.0.35 \
+    asyncpg==0.29.0 \
+    alembic==1.14.0 \
+    pydantic==2.9.0 \
+    pydantic-settings==2.5.0 \
+    psycopg2-binary==2.9.10
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+CMD ["sh", "-c", "python apply_db.py && python scripts/seed_bootstrap.py"]

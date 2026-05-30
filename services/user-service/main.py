@@ -14,13 +14,13 @@ from uuid import UUID
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
-from shared.database import engine, get_session, init_db
+from shared.database import get_session
 from shared.auth import get_current_user, require_admin
 from shared.broker import broker
+from shared.service_auth import add_service_auth_middleware
 from shared.schemas.history import UserAIHistoryCreate, UserAIHistoryResponse, UserAIHistoryList
 from shared.schemas.settings import UserSettingsUpdate, UserSettingsResponse
 from shared.schemas.statistics import UserStatistics
@@ -43,28 +43,10 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan: initialize DB on startup."""
     logger.info("User Service starting...")
-    await init_db()
     try:
         await broker.connect()
     except Exception as exc:
         logger.warning("Could not connect to RabbitMQ: %s", exc)
-    async with engine.begin() as conn:
-        await conn.execute(
-            text(
-                """
-                ALTER TABLE support_conversations
-                ADD COLUMN IF NOT EXISTS user_last_read_at TIMESTAMPTZ
-                """
-            )
-        )
-        await conn.execute(
-            text(
-                """
-                ALTER TABLE support_conversations
-                ADD COLUMN IF NOT EXISTS admin_last_read_at TIMESTAMPTZ
-                """
-            )
-        )
     yield
     await broker.disconnect()
     logger.info("User Service shutting down...")
@@ -84,6 +66,8 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
+add_service_auth_middleware(app)
 
 
 def get_user_service(session: AsyncSession = Depends(get_session)) -> UserService:
