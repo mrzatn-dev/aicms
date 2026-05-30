@@ -8,6 +8,7 @@ import httpx
 from fastapi import FastAPI, Request, Response, HTTPException
 
 from shared.config import as_http_url, settings
+from shared.service_auth import internal_service_headers
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,10 @@ async def proxy_request(
         headers["x-forwarded-host"] = forwarded_host
         headers["x-forwarded-proto"] = forwarded_proto
     headers.pop("host", None)
+
+    internal_headers = internal_service_headers()
+    if internal_headers:
+        headers.update(internal_headers)
 
     # Read body if present
     body = await request.body()
