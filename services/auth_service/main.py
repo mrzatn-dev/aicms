@@ -7,8 +7,9 @@ import sys
 import os
 import logging
 
-# Add project root to path for shared imports
+# Add project root and this service directory for shared/local imports.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.dirname(__file__))
 
 from contextlib import asynccontextmanager
 from uuid import UUID
