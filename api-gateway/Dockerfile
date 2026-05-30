@@ -9,6 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy shared directory
 COPY shared /app/shared
 
+# Alembic migrations (run before serving auth routes)
+COPY migrations /app/migrations
+COPY alembic.ini apply_db.py /app/
+
 # Auth is mounted in-process by the gateway
 COPY services/auth_service /app/services/auth_service
 
@@ -24,4 +28,4 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "python /app/apply_db.py && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
