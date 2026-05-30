@@ -35,7 +35,11 @@ export default function RegisterPage() {
       const result = await api.register(form);
       // If backend returns access_token immediately (no email verification yet)
       if (result.access_token) {
-        localStorage.setItem('user', JSON.stringify(result.user));
+        if (result.user) {
+          localStorage.setItem('user', JSON.stringify(result.user));
+        }
+        router.push('/workspace');
+      } else if (api.getToken()) {
         router.push('/workspace');
       } else {
         // Backend requires email confirmation

@@ -106,7 +106,20 @@ class ApiClient {
                 throw new Error(errorDetail);
             }
 
-            return response.json();
+            const text = await response.text();
+            if (!text) {
+                return {} as T;
+            }
+            try {
+                return JSON.parse(text) as T;
+            } catch {
+                // Cookie auth may still succeed even if the JSON body was truncated in transit.
+                if (response.status >= 200 && response.status < 300) {
+                    this.markSessionActive(true);
+                    return {} as T;
+                }
+                throw new Error('Invalid server response');
+            }
         } catch (error) {
             console.error('API request failed:', error);
             throw error;

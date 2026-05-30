@@ -37,11 +37,16 @@ async function proxyRequest(request: NextRequest, path: string[]) {
 
   try {
     const upstream = await fetch(url, init);
-    const responseHeaders = new Headers(upstream.headers);
-    responseHeaders.delete('content-encoding');
-    responseHeaders.delete('transfer-encoding');
+    const body = await upstream.arrayBuffer();
 
-    return new NextResponse(upstream.body, {
+    const responseHeaders = new Headers(upstream.headers);
+    // Hop-by-hop / encoding headers must not be forwarded with a buffered body.
+    responseHeaders.delete('content-encoding');
+    responseHeaders.delete('content-length');
+    responseHeaders.delete('transfer-encoding');
+    responseHeaders.delete('connection');
+
+    return new NextResponse(body, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: responseHeaders,
