@@ -66,9 +66,17 @@ class RedisSettings(BaseSettings):
     REDIS_HOST: str = Field(default="localhost", description="Redis host")
     REDIS_PORT: int = Field(default=6379, description="Redis port")
     REDIS_DB: int = Field(default=0, description="Redis database number")
+    REDIS_PASSWORD: str | None = Field(default=None, description="Redis password")
 
     @property
     def redis_url(self) -> str:
+        from urllib.parse import quote_plus
+
+        if self.REDIS_PASSWORD:
+            return (
+                f"redis://:{quote_plus(self.REDIS_PASSWORD)}"
+                f"@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+            )
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
     model_config = {"env_file": str(ROOT_ENV_FILE), "extra": "ignore"}
@@ -103,6 +111,17 @@ class MinioSettings(BaseSettings):
     MINIO_SECRET_KEY: str = Field(default="minioadmin", description="Minio secret key")
     MINIO_SECURE: bool = Field(default=False, description="Use HTTPS for Minio")
     MINIO_BUCKET_IMAGES: str = Field(default="cms-images", description="Bucket for images")
+    MINIO_PUBLIC_URL: str | None = Field(
+        default=None,
+        description="Public base URL for uploaded objects (e.g. http://localhost:9000)",
+    )
+
+    @property
+    def minio_public_base_url(self) -> str:
+        if self.MINIO_PUBLIC_URL:
+            return self.MINIO_PUBLIC_URL.rstrip("/")
+        scheme = "https" if self.MINIO_SECURE else "http"
+        return f"{scheme}://{self.MINIO_ENDPOINT.rstrip('/')}"
 
     model_config = {"env_file": str(ROOT_ENV_FILE), "extra": "ignore"}
 
@@ -168,8 +187,8 @@ class OAuthSettings(BaseSettings):
         description="Frontend URL receiving JWT after OAuth",
     )
     OAUTH_API_BASE_URL: str = Field(
-        default="http://localhost:8000",
-        description="Public API Gateway URL for provider callbacks",
+        default="http://localhost:3000",
+        description="Public URL for OAuth provider callbacks (frontend origin with /api proxy)",
     )
 
     model_config = {"env_file": str(ROOT_ENV_FILE), "extra": "ignore"}
@@ -190,6 +209,10 @@ class AppSettings(
     APP_VERSION: str = Field(default="1.0.0", description="Application version")
     DEBUG: bool = Field(default=False, description="Debug mode")
     DEEPSEEK_API_KEY: str | None = Field(default=None, description="DeepSeek API Key")
+    INTERNAL_SERVICE_TOKEN: str | None = Field(
+        default=None,
+        description="Shared secret for gateway/service-to-service HTTP calls",
+    )
     API_GATEWAY_URL: str = Field(default="http://api-gateway:8000", description="Internal API Gateway URL")
     AUTH_SERVICE_URL: str = Field(default="http://auth-service:8001", description="Internal auth service URL")
     CONTENT_SERVICE_URL: str = Field(default="http://content-service:8002", description="Internal content service URL")

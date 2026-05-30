@@ -46,7 +46,7 @@ async def upload_image_to_s3(file: UploadFile) -> str | None:
             content_type=file.content_type or "image/jpeg"
         )
         
-        url = f"http://localhost:9000/{bucket}/{file_name}"
+        url = f"{settings.minio_public_base_url}/{bucket}/{file_name}"
         logger.info(f"Successfully uploaded image: {url}")
         return url
         
