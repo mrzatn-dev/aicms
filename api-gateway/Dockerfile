@@ -16,8 +16,7 @@ COPY services/auth_service /app/services/auth_service
 COPY api-gateway /app/api-gateway
 
 RUN pip install --default-timeout=100 --no-cache-dir \
-    -r /app/api-gateway/requirements.txt \
-    -r /app/services/auth_service/requirements.txt
+    -r /app/api-gateway/requirements.txt
 
 WORKDIR /app/api-gateway
 ENV PYTHONPATH=/app
