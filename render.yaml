@@ -109,7 +109,7 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: OAUTH_API_BASE_URL
-        value: https://aicms-9kw6.onrender.com
+        value: https://aicms-frontend.onrender.com
       - key: OAUTH_REDIRECT_URI
         value: https://aicms-frontend.onrender.com/oauth/callback
       - key: DEBUG
@@ -534,7 +534,7 @@ services:
       - key: CORS_ORIGINS
         value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
       - key: OAUTH_API_BASE_URL
-        value: https://aicms-9kw6.onrender.com
+        value: https://aicms-frontend.onrender.com
       - key: DEBUG
         value: "false"
 
@@ -549,7 +549,10 @@ services:
     autoDeploy: true
     envVars:
       - key: API_PROXY_TARGET
-        value: https://aicms-9kw6.onrender.com
+        fromService:
+          type: web
+          name: aicms-9kw6
+          property: hostport
       - key: NEXT_PUBLIC_API_URL
         value: https://aicms-frontend.onrender.com
       - key: NODE_ENV

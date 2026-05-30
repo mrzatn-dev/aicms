@@ -3,11 +3,17 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 function getProxyTarget(): string {
-  return (
+  const raw = (
     process.env.API_PROXY_TARGET ||
-    process.env.NEXT_PUBLIC_API_URL ||
     'http://localhost:8000'
   ).replace(/\/$/, '');
+
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return raw;
+  }
+
+  // Render fromService hostport, e.g. "aicms-9kw6:10000"
+  return `http://${raw}`;
 }
 
 async function proxyRequest(request: NextRequest, path: string[]) {
