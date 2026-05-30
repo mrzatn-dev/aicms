@@ -35,16 +35,24 @@ async function proxyRequest(request: NextRequest, path: string[]) {
     init.duplex = 'half';
   }
 
-  const upstream = await fetch(url, init);
-  const responseHeaders = new Headers(upstream.headers);
-  responseHeaders.delete('content-encoding');
-  responseHeaders.delete('transfer-encoding');
+  try {
+    const upstream = await fetch(url, init);
+    const responseHeaders = new Headers(upstream.headers);
+    responseHeaders.delete('content-encoding');
+    responseHeaders.delete('transfer-encoding');
 
-  return new NextResponse(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: responseHeaders,
-  });
+    return new NextResponse(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders,
+    });
+  } catch (error) {
+    console.error('API proxy failed:', url, error);
+    return NextResponse.json(
+      { detail: `API gateway unreachable at ${target}` },
+      { status: 502 },
+    );
+  }
 }
 
 type RouteContext = { params: { path: string[] } };

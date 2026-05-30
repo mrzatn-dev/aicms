@@ -64,7 +64,7 @@ def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthServic
 
 
 def _token_response(token_response: TokenResponse) -> JSONResponse:
-    response = JSONResponse(content=token_response.model_dump())
+    response = JSONResponse(content=token_response.model_dump(mode="json"))
     set_auth_cookie(response, token_response.access_token)
     return response
 
