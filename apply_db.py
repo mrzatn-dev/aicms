@@ -116,6 +116,14 @@ def _reconcile_unknown_revision(cfg: Config, db_revision: str, known: set[str]) 
     )
     print(f"Known revisions: {sorted(known)}", file=sys.stderr)
 
+    if not known:
+        print(
+            "No Alembic revisions found in this image. "
+            "Ensure the Docker build copies migrations/versions into /app/migrations/versions.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     if db_revision == UNKNOWN_REVISION and UNKNOWN_REVISION not in known:
         if asyncio.run(_users_has_email_verification_columns()):
             print(

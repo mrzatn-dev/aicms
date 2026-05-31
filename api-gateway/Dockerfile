@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY shared /app/shared
 
 # Alembic migrations (run before serving auth routes)
-COPY migrations/env.py migrations/script.py.mako migrations/versions /app/migrations/
+COPY migrations /app/migrations
 COPY alembic.ini apply_db.py create_admin.py /app/
 
 # Auth is mounted in-process by the gateway
