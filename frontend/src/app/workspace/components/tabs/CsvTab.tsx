@@ -4,6 +4,7 @@ import type { RefObject } from 'react';
 
 import { AlertTriangle, BarChart3, CheckCircle2, Columns3, FileSpreadsheet, Lightbulb, Loader2, Rows3, ShieldAlert, ShieldCheck, Sparkles, Upload, X } from 'lucide-react';
 
+import { SaveArticleButton } from '../SaveArticleButton';
 import { getWorkspaceCopy } from '../../i18n';
 import type { CSVResult, LocaleCode } from '../../types';
 import { qualityColor, qualityPercent } from '../../utils';
@@ -18,6 +19,8 @@ interface CsvTabProps {
     onFileSelect: (file: File) => void;
     onAnalyze: () => void;
     onReset: () => void;
+    onSaveAsArticle?: () => void;
+    saveArticleLoading?: boolean;
 }
 
 export function CsvTab({
@@ -30,6 +33,8 @@ export function CsvTab({
     onFileSelect,
     onAnalyze,
     onReset,
+    onSaveAsArticle,
+    saveArticleLoading,
 }: CsvTabProps) {
     const copy = getWorkspaceCopy(locale).csv;
 
@@ -103,7 +108,16 @@ export function CsvTab({
                                 <p className="text-sm text-surface-500">{csvResult.total_rows.toLocaleString()} {copy.rows.toLowerCase()}</p>
                             </div>
                         </div>
-                        <button onClick={onReset} className="btn-secondary text-sm">{copy.new}</button>
+                        <div className="flex items-center gap-2">
+                            {onSaveAsArticle && (
+                                <SaveArticleButton
+                                    locale={locale}
+                                    loading={saveArticleLoading}
+                                    onClick={onSaveAsArticle}
+                                />
+                            )}
+                            <button onClick={onReset} className="btn-secondary text-sm">{copy.new}</button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

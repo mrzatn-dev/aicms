@@ -77,6 +77,9 @@ export default function Navbar() {
 
                 {/* Desktop Nav */}
                 <div className="hidden md:flex items-center gap-6">
+                    <Link href="/articles" className="text-sm font-medium text-surface-700 hover:text-primary-600 transition-colors">
+                        {locale === 'en' ? 'Blog' : locale === 'kk' ? 'Блог' : 'Блог'}
+                    </Link>
                     {user ? (
                         <>
                             <Link href="/workspace" className="text-sm font-medium text-surface-700 hover:text-primary-600 transition-colors flex items-center gap-1.5">
@@ -158,6 +161,9 @@ export default function Navbar() {
             {menuOpen && (
                 <div className="md:hidden border-t border-surface-200/60 bg-white/95 backdrop-blur-xl animate-fade-in">
                     <div className="px-6 py-4 flex flex-col gap-3">
+                        <Link href="/articles" className="text-sm font-medium text-surface-700 py-2" onClick={() => setMenuOpen(false)}>
+                            {locale === 'en' ? 'Blog' : locale === 'kk' ? 'Блог' : 'Блог'}
+                        </Link>
                         {user ? (
                             <>
                                 <Link href="/workspace" className="text-sm font-medium text-surface-700 py-2" onClick={() => setMenuOpen(false)}>

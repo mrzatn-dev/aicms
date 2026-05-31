@@ -92,6 +92,26 @@ async def get_current_user(
     }
 
 
+async def get_optional_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> dict | None:
+    """Return current user dict or None when unauthenticated."""
+    auth_header = f"Bearer {credentials.credentials}" if credentials else None
+    token = get_token_from_request(request, auth_header)
+    if not token:
+        return None
+    try:
+        payload = decode_access_token(token)
+    except HTTPException:
+        return None
+    return {
+        "user_id": uuid.UUID(payload["sub"]),
+        "email": payload["email"],
+        "role": payload["role"],
+    }
+
+
 async def require_admin(
     current_user: dict = Depends(get_current_user),
 ) -> dict:

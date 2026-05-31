@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
     MessageSquare, FileCheck, FileText, FileSpreadsheet, Image as ImageIcon,
     Sparkles, ArrowRight, CheckCircle2, Bot, Upload,
-    BarChart3, AudioLines,
+    BarChart3, AudioLines, Newspaper,
 } from 'lucide-react';
 import Navbar from '@/app/components/Navbar';
 import WelcomeSplash from '@/app/components/WelcomeSplash';
@@ -43,6 +43,7 @@ export default function HomePage() {
         { icon: FileSpreadsheet, key: 'csv', gradient: 'from-rose-500 to-pink-600' },
         { icon: ImageIcon, key: 'image', gradient: 'from-cyan-500 to-blue-600' },
         { icon: AudioLines, key: 'audio', gradient: 'from-purple-500 to-pink-600' },
+        { icon: Newspaper, key: 'articles', gradient: 'from-violet-500 to-fuchsia-600', href: '/articles' },
     ];
 
     const stepsConfig = [
@@ -114,6 +115,9 @@ export default function HomePage() {
                                 <Link href="/login" className="btn-secondary text-base !px-8 !py-4">
                                     {copy.login}
                                 </Link>
+                                <Link href="/articles" className="btn-secondary text-base !px-8 !py-4">
+                                    {copy.readBlog}
+                                </Link>
                             </div>
 
                             <div className="mt-10 flex flex-wrap justify-center lg:justify-start gap-6 text-sm text-surface-600 animate-fade-in" style={{ animationDelay: '0.35s' }}>
@@ -121,7 +125,7 @@ export default function HomePage() {
                                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                     <span>AI online</span>
                                 </div>
-                                <div><strong className="text-surface-900">6+</strong> инструментов</div>
+                                <div><strong className="text-surface-900">7+</strong> {locale === 'en' ? 'tools' : locale === 'kk' ? 'құрал' : 'инструментов'}</div>
                                 <div><strong className="text-surface-900">3</strong> языка</div>
                             </div>
                         </div>
@@ -162,8 +166,8 @@ export default function HomePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
                             {toolsConfig.map((tool) => {
                                 const toolCopy = copy.tools[tool.key as keyof typeof copy.tools];
-                                return (
-                                    <div key={tool.key} className="tool-card-elegant bg-white group">
+                                const card = (
+                                    <>
                                         <div
                                             className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${tool.gradient} flex items-center justify-center mb-5 shadow-lg group-hover:scale-110 transition-transform duration-300`}
                                         >
@@ -171,6 +175,18 @@ export default function HomePage() {
                                         </div>
                                         <h3 className="text-lg font-semibold text-surface-900 mb-2">{toolCopy.title}</h3>
                                         <p className="text-sm text-surface-700/70 leading-relaxed">{toolCopy.description}</p>
+                                    </>
+                                );
+                                if ('href' in tool && tool.href) {
+                                    return (
+                                        <Link key={tool.key} href={tool.href} className="tool-card-elegant bg-white group block">
+                                            {card}
+                                        </Link>
+                                    );
+                                }
+                                return (
+                                    <div key={tool.key} className="tool-card-elegant bg-white group">
+                                        {card}
                                     </div>
                                 );
                             })}
@@ -321,7 +337,10 @@ export default function HomePage() {
                             </span>
                         </div>
                         <p className="text-sm text-surface-700/60">© 2026 AI-инструменты для работы с контентом.</p>
-                        <div className="flex gap-6">
+                        <div className="flex gap-6 flex-wrap justify-center">
+                            <Link href="/articles" className="text-sm text-surface-700/60 hover:text-emerald-600 transition-colors">
+                                {copy.readBlog}
+                            </Link>
                             <Link href="/workspace" className="text-sm text-surface-700/60 hover:text-emerald-600 transition-colors">
                                 Workspace
                             </Link>

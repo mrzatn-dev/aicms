@@ -548,8 +548,9 @@ services:
         value: "false"
       - key: RESEND_API_KEY
         sync: false
+      # Use a Resend-verified sender, e.g. onboarding@resend.dev or noreply@your-domain.com
       - key: EMAIL_FROM
-        value: AI CMS <noreply@aicms.local>
+        value: AI CMS <onboarding@resend.dev>
       - key: DEBUG
         value: "false"
 

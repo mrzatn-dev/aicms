@@ -70,7 +70,7 @@ export function HomeTab({ locale, user, onTabChange }: HomeTabProps) {
                         <Bot className="w-6 h-6 text-violet-600 dark:text-violet-400" />
                     </div>
                     <div>
-                        <p className="text-2xl font-bold text-surface-900">7</p>
+                        <p className="text-2xl font-bold text-surface-900">{quickActions.length}</p>
                         <p className="text-sm text-surface-500">{copy.aiTools}</p>
                     </div>
                 </div>

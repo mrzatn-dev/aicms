@@ -4,6 +4,7 @@ import type { RefObject } from 'react';
 
 import { AlertTriangle, CheckCircle2, FileText, FileType, Lightbulb, Loader2, ShieldAlert, ShieldCheck, Sparkles, Upload } from 'lucide-react';
 
+import { SaveArticleButton } from '../SaveArticleButton';
 import { getWorkspaceCopy } from '../../i18n';
 import type { DocumentResult, LocaleCode } from '../../types';
 
@@ -17,6 +18,8 @@ interface DocumentTabProps {
     onFileSelect: (file: File) => void;
     onAnalyze: () => void;
     onReset: () => void;
+    onSaveAsArticle?: () => void;
+    saveArticleLoading?: boolean;
 }
 
 export function DocumentTab({
@@ -29,6 +32,8 @@ export function DocumentTab({
     onFileSelect,
     onAnalyze,
     onReset,
+    onSaveAsArticle,
+    saveArticleLoading,
 }: DocumentTabProps) {
     const copy = getWorkspaceCopy(locale).document;
 
@@ -99,7 +104,16 @@ export function DocumentTab({
                                 <p className="text-sm text-surface-500">{docResult.word_count} слов • {docResult.language}</p>
                             </div>
                         </div>
-                        <button onClick={onReset} className="btn-secondary text-sm">{copy.new}</button>
+                        <div className="flex items-center gap-2">
+                            {onSaveAsArticle && (
+                                <SaveArticleButton
+                                    locale={locale}
+                                    loading={saveArticleLoading}
+                                    onClick={onSaveAsArticle}
+                                />
+                            )}
+                            <button onClick={onReset} className="btn-secondary text-sm">{copy.new}</button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">

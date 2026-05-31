@@ -4,6 +4,7 @@ import type { RefObject } from 'react';
 
 import { AudioLines, Clock3, FileAudio, Lightbulb, Loader2, Sparkles, Upload } from 'lucide-react';
 
+import { SaveArticleButton } from '../SaveArticleButton';
 import { getWorkspaceCopy, getLocaleTag } from '../../i18n';
 import type { AudioResult, LocaleCode } from '../../types';
 
@@ -17,6 +18,8 @@ interface AudioTabProps {
     onFileSelect: (file: File) => void;
     onAnalyze: () => void;
     onReset: () => void;
+    onSaveAsArticle?: () => void;
+    saveArticleLoading?: boolean;
 }
 
 const formatDuration = (seconds?: number | null) => {
@@ -36,6 +39,8 @@ export function AudioTab({
     onFileSelect,
     onAnalyze,
     onReset,
+    onSaveAsArticle,
+    saveArticleLoading,
 }: AudioTabProps) {
     const copy = getWorkspaceCopy(locale).audio;
     const localeTag = getLocaleTag(locale);
@@ -114,7 +119,16 @@ export function AudioTab({
                                 </p>
                             </div>
                         </div>
-                        <button onClick={onReset} className="btn-secondary text-sm">{copy.new}</button>
+                        <div className="flex items-center gap-2">
+                            {onSaveAsArticle && (
+                                <SaveArticleButton
+                                    locale={locale}
+                                    loading={saveArticleLoading}
+                                    onClick={onSaveAsArticle}
+                                />
+                            )}
+                            <button onClick={onReset} className="btn-secondary text-sm">{copy.new}</button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

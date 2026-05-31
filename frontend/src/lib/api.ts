@@ -542,6 +542,16 @@ class ApiClient {
             body: data,
         });
     }
+
+    /** Authenticated JSON request (cookies + refresh). */
+    requestAuth<T>(endpoint: string, options: RequestOptions = {}) {
+        return this.request<T>(endpoint, options);
+    }
+
+    /** Public JSON request; skips refresh redirect on 401. */
+    requestPublic<T>(endpoint: string, options: RequestOptions = {}) {
+        return this.request<T>(endpoint, { ...options, skipRefresh: true });
+    }
 }
 
 export const api = new ApiClient();

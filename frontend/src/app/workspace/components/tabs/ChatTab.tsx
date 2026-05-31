@@ -4,6 +4,7 @@ import type { RefObject } from 'react';
 
 import { Bot, Loader2, Send } from 'lucide-react';
 
+import { SaveArticleButton } from '../SaveArticleButton';
 import { getLocaleTag, getWorkspaceCopy } from '../../i18n';
 import type { ChatMessage, LocaleCode, UserInfo } from '../../types';
 
@@ -17,6 +18,9 @@ interface ChatTabProps {
     onInputChange: (value: string) => void;
     onSendMessage: () => void;
     onResetChat: () => void;
+    onSaveAsArticle?: () => void;
+    saveArticleLoading?: boolean;
+    canSaveAsArticle?: boolean;
 }
 
 export function ChatTab({
@@ -29,6 +33,9 @@ export function ChatTab({
     onInputChange,
     onSendMessage,
     onResetChat,
+    onSaveAsArticle,
+    saveArticleLoading,
+    canSaveAsArticle,
 }: ChatTabProps) {
     const copy = getWorkspaceCopy(locale).chat;
     const localeTag = getLocaleTag(locale);
@@ -47,12 +54,22 @@ export function ChatTab({
                         {copy.online}
                     </p>
                 </div>
-                <button
-                    onClick={onResetChat}
-                    className="ml-auto relative z-10 text-xs text-surface-400 hover:text-surface-700 px-3 py-1.5 rounded-lg hover:bg-white/60 dark:hover:bg-surface-800/60 transition-colors"
-                >
-                    {copy.clear}
-                </button>
+                <div className="ml-auto relative z-10 flex items-center gap-2">
+                    {onSaveAsArticle && canSaveAsArticle && (
+                        <SaveArticleButton
+                            locale={locale}
+                            loading={saveArticleLoading}
+                            onClick={onSaveAsArticle}
+                            className="!py-1.5 !px-2.5 text-xs"
+                        />
+                    )}
+                    <button
+                        onClick={onResetChat}
+                        className="text-xs text-surface-400 hover:text-surface-700 px-3 py-1.5 rounded-lg hover:bg-white/60 dark:hover:bg-surface-800/60 transition-colors"
+                    >
+                        {copy.clear}
+                    </button>
+                </div>
             </div>
 
             <div className="card flex-1 overflow-y-auto p-4 space-y-4 min-h-0">

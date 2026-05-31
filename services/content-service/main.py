@@ -24,7 +24,7 @@ from shared.schemas.article import (
     ArticleResponse,
     ArticleListResponse,
 )
-from shared.auth import get_current_user, require_admin
+from shared.auth import get_current_user, get_optional_user, require_admin
 from shared.broker import broker
 from shared.service_auth import add_service_auth_middleware
 from shared.observability import ServiceObservabilityMiddleware
@@ -96,16 +96,22 @@ async def list_articles(
     category_id: UUID | None = None,
     tag: str | None = None,
     status_filter: str | None = Query(None, alias="status"),
+    current_user: dict | None = Depends(get_optional_user),
     service: ContentService = Depends(get_content_service),
 ):
-    """List articles with filtering, search, and pagination."""
+    """List articles. Public callers only see published; admins may filter any status."""
+    if current_user and current_user.get("role") == "admin":
+        effective_status = status_filter
+    else:
+        effective_status = "published"
+
     return await service.list_articles(
         page=page,
         page_size=page_size,
         search=search,
         category_id=category_id,
         tag=tag,
-        status_filter=status_filter,
+        status_filter=effective_status,
     )
 
 
@@ -131,10 +137,11 @@ async def list_my_articles(
 @app.get("/content/{article_id}", response_model=ArticleResponse)
 async def get_article(
     article_id: UUID,
+    current_user: dict | None = Depends(get_optional_user),
     service: ContentService = Depends(get_content_service),
 ):
-    """Get a single article by ID."""
-    return await service.get_article(article_id)
+    """Get a single article by ID (non-published only for author or admin)."""
+    return await service.get_article_visible(article_id, current_user)
 
 
 @app.put("/content/{article_id}", response_model=ArticleResponse)

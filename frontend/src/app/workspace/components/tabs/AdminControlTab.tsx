@@ -2,6 +2,7 @@
 
 import { Activity, Bot, CheckCircle2, FileArchive, Loader2, RefreshCw, Shield, ShieldCheck, Trash2, UserCog, Users } from 'lucide-react';
 
+import { AdminArticlesSection } from '../AdminArticlesSection';
 import { getLocaleTag } from '../../i18n';
 import { formatToolType } from '../../utils';
 import type { AdminFileItem, AdminOverviewData, AdminUserItem, LocaleCode, UserInfo } from '../../types';
@@ -220,6 +221,8 @@ export function AdminControlTab({
                             ))}
                         </div>
                     </div>
+
+                    <AdminArticlesSection locale={locale} />
 
                     <div className="card p-6">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">

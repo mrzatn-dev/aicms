@@ -10,15 +10,15 @@ const STORAGE_KEY = 'workspace_welcome_seen';
 const TIPS: Record<LocaleCode, { title: string; hint: string }> = {
     ru: {
         title: 'Подсказка',
-        hint: 'Начните с AI Чата или загрузите документ — результаты сохранятся в истории.',
+        hint: 'Сохраняйте результаты AI как статьи во вкладке «Статьи» и публикуйте их в блоге.',
     },
     en: {
         title: 'Tip',
-        hint: 'Start with AI Chat or upload a document — results are saved to your history.',
+        hint: 'Save AI outputs as articles in the Articles tab and publish them to the blog.',
     },
     kk: {
         title: 'Кеңес',
-        hint: 'AI чаттан бастаңыз немесе құжат жүктеңіз — нәтижелер тарихта сақталады.',
+        hint: 'AI нәтижелерін «Мақалалар» бөлімінде сақтап, блогта жариялаңыз.',
     },
 };
 

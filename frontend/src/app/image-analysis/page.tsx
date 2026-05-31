@@ -130,7 +130,7 @@ export default function ImageAnalysisPage() {
                         <Link href="/csv" className="text-sm font-medium text-surface-700 hover:text-primary-600 transition-colors">
                             CSV Анализ
                         </Link>
-                        <Link href="/content" className="text-sm font-medium text-surface-700 hover:text-primary-600 transition-colors">
+                        <Link href="/articles" className="text-sm font-medium text-surface-700 hover:text-primary-600 transition-colors">
                             Content
                         </Link>
                         <Link href="/admin" className="btn-secondary text-sm !px-4 !py-2">Admin</Link>

@@ -2,6 +2,7 @@
 
 import { AlertCircle, AlertTriangle, CheckCircle2, FileCheck, Lightbulb, Loader2 } from 'lucide-react';
 
+import { SaveArticleButton } from '../SaveArticleButton';
 import { getWorkspaceCopy } from '../../i18n';
 import type { LocaleCode, ValidationResult } from '../../types';
 
@@ -15,6 +16,8 @@ interface ValidateTabProps {
     onContentChange: (value: string) => void;
     onValidate: () => void;
     onReset: () => void;
+    onSaveAsArticle?: () => void;
+    saveArticleLoading?: boolean;
 }
 
 export function ValidateTab({
@@ -27,6 +30,8 @@ export function ValidateTab({
     onContentChange,
     onValidate,
     onReset,
+    onSaveAsArticle,
+    saveArticleLoading,
 }: ValidateTabProps) {
     const copy = getWorkspaceCopy(locale).validate;
 
@@ -70,7 +75,16 @@ export function ValidateTab({
                                 <p className="text-sm text-surface-500">{validateResult.is_valid ? copy.passed : copy.hasIssues}</p>
                             </div>
                         </div>
-                        <button onClick={onReset} className="btn-secondary text-sm">{copy.reset}</button>
+                        <div className="flex items-center gap-2">
+                            {onSaveAsArticle && (
+                                <SaveArticleButton
+                                    locale={locale}
+                                    loading={saveArticleLoading}
+                                    onClick={onSaveAsArticle}
+                                />
+                            )}
+                            <button onClick={onReset} className="btn-secondary text-sm">{copy.reset}</button>
+                        </div>
                     </div>
 
                     {validateResult.issues.length > 0 && (

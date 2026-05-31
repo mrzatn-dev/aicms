@@ -14,6 +14,7 @@ export type LocaleCode = 'ru' | 'en' | 'kk';
 
 export type ActiveTab =
     | 'home'
+    | 'articles'
     | 'profile'
     | 'history'
     | 'settings'

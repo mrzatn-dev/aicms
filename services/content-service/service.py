@@ -112,6 +112,36 @@ class ContentService:
             )
         return ArticleResponse.model_validate(article)
 
+    async def get_article_visible(
+        self, article_id: uuid.UUID, current_user: dict | None
+    ) -> ArticleResponse:
+        """Return article if published or caller is author/admin."""
+        article = await self.article_repo.get_by_id(article_id)
+        if not article:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Article not found",
+            )
+
+        status_value = (
+            article.status.value
+            if hasattr(article.status, "value")
+            else str(article.status)
+        )
+        if status_value == ArticleStatus.PUBLISHED.value:
+            return ArticleResponse.model_validate(article)
+
+        if current_user:
+            if current_user.get("role") == "admin":
+                return ArticleResponse.model_validate(article)
+            if str(article.author_id) == str(current_user["user_id"]):
+                return ArticleResponse.model_validate(article)
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Article not found",
+        )
+
     async def update_article(
         self,
         article_id: uuid.UUID,

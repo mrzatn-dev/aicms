@@ -138,7 +138,7 @@ export default function CSVPage() {
                     </Link>
                     <div className="flex items-center gap-6">
                         <Link
-                            href="/content"
+                            href="/articles"
                             className="text-sm font-medium text-surface-700 hover:text-primary-600 transition-colors"
                         >
                             Content

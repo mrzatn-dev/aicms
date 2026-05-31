@@ -44,6 +44,12 @@ async def send_verification_email(*, to_email: str, verify_url: str) -> None:
 async def send_password_reset_email(*, to_email: str, reset_url: str) -> None:
     """Send password reset link. Logs the URL when Resend is not configured."""
     subject = "Сброс пароля — AI CMS"
+    text = (
+        "Здравствуйте!\n\n"
+        "Вы запросили сброс пароля для AI CMS. Перейдите по ссылке:\n"
+        f"{reset_url}\n\n"
+        "Ссылка действительна 1 час. Если вы не запрашивали сброс — проигнорируйте письмо."
+    )
     html = (
         "<p>Здравствуйте!</p>"
         "<p>Вы запросили сброс пароля для AI CMS. Перейдите по ссылке:</p>"
@@ -52,7 +58,11 @@ async def send_password_reset_email(*, to_email: str, reset_url: str) -> None:
     )
 
     if not settings.RESEND_API_KEY:
-        logger.info("Password reset link for %s: %s", to_email, reset_url)
+        logger.warning(
+            "RESEND_API_KEY is not set — email not sent. Password reset link for %s: %s",
+            to_email,
+            reset_url,
+        )
         return
 
     async with httpx.AsyncClient(timeout=20.0) as client:
@@ -63,9 +73,11 @@ async def send_password_reset_email(*, to_email: str, reset_url: str) -> None:
                 "from": settings.EMAIL_FROM,
                 "to": [to_email],
                 "subject": subject,
+                "text": text,
                 "html": html,
             },
         )
         if response.status_code >= 400:
             logger.error("Resend API error %s: %s", response.status_code, response.text)
             raise RuntimeError("Failed to send password reset email")
+        logger.info("Password reset email queued via Resend for %s (id=%s)", to_email, response.json().get("id"))

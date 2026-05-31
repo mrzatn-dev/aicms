@@ -9,6 +9,7 @@ import {
     Image as ImageIcon,
     LayoutDashboard,
     MessageSquare,
+    Newspaper,
     PieChart,
     Server,
     Settings as SettingsIcon,
@@ -16,6 +17,7 @@ import {
     User,
 } from 'lucide-react';
 
+import { getArticlesCopy } from './articles-i18n';
 import { getWorkspaceCopy } from './i18n';
 import type { LocaleCode, QuickAction, SidebarItem } from './types';
 
@@ -23,6 +25,7 @@ export const getSidebarItems = (locale: LocaleCode): SidebarItem[] => {
     const copy = getWorkspaceCopy(locale);
     return [
         { id: 'home', label: copy.sidebar.home, icon: LayoutDashboard, gradient: 'from-primary-500 to-violet-500', category: 'main' },
+        { id: 'articles', label: getArticlesCopy(locale).sidebar, icon: Newspaper, gradient: 'from-violet-500 to-fuchsia-500', category: 'main' },
         { id: 'profile', label: copy.sidebar.profile, icon: User, gradient: 'from-emerald-500 to-teal-500', category: 'main' },
         { id: 'history', label: copy.sidebar.history, icon: History, gradient: 'from-amber-500 to-yellow-500', category: 'main' },
         { id: 'settings', label: copy.sidebar.settings, icon: SettingsIcon, gradient: 'from-slate-500 to-gray-500', category: 'main' },
@@ -43,6 +46,7 @@ export const getSidebarItems = (locale: LocaleCode): SidebarItem[] => {
 export const getQuickActions = (locale: LocaleCode): QuickAction[] => {
     const copy = getWorkspaceCopy(locale);
     return [
+        { id: 'articles', title: getArticlesCopy(locale).sidebar, desc: getArticlesCopy(locale).subtitle, icon: Newspaper, color: 'from-violet-500 to-fuchsia-500' },
         { id: 'chat', title: copy.quickActions.chat.title, desc: copy.quickActions.chat.desc, icon: MessageSquare, color: 'from-emerald-500 to-green-500' },
         { id: 'validate', title: copy.quickActions.validate.title, desc: copy.quickActions.validate.desc, icon: FileCheck, color: 'from-amber-500 to-orange-500' },
         { id: 'document', title: copy.quickActions.document.title, desc: copy.quickActions.document.desc, icon: FileText, color: 'from-indigo-500 to-violet-500' },

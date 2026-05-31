@@ -6,12 +6,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { api } from '@/lib/api';
+import { contentApi, padArticleContent } from '@/lib/content';
 import { exportToPDF } from '@/lib/pdfExport';
+
+import { getArticlesCopy } from './articles-i18n';
 
 import { fontSizeMap, getInitialChatMessages } from './config';
 import { getWorkspaceCopy } from './i18n';
+import { ToastHost, showToast } from './components/ToastHost';
+import { buildArticleFromHistory } from './utils/articleFromHistory';
+import {
+    buildArticleFromAudioResult,
+    buildArticleFromCsvResult,
+    buildArticleFromImageResult,
+} from './utils/articleFromAi';
 import { WorkspaceSidebar } from './components/WorkspaceSidebar';
 import { WorkspaceTopBar } from './components/WorkspaceTopBar';
+import { ArticlesTab } from './components/tabs/ArticlesTab';
 import { AudioTab } from './components/tabs/AudioTab';
 import { AdminControlTab } from './components/tabs/AdminControlTab';
 import { ChatTab } from './components/tabs/ChatTab';
@@ -117,6 +128,9 @@ export default function UnifiedDashboardPage() {
     const [historyPage, setHistoryPage] = useState(1);
     const [historyTotal, setHistoryTotal] = useState(0);
     const [historyFilter, setHistoryFilter] = useState('all');
+
+    const [articleSaveLoading, setArticleSaveLoading] = useState(false);
+    const [articlesRefresh, setArticlesRefresh] = useState(0);
 
     const [settingsLoading, setSettingsLoading] = useState(false);
     const [settingsForm, setSettingsForm] = useState<SettingsFormState>(initialSettingsForm);
@@ -721,6 +735,34 @@ export default function UnifiedDashboardPage() {
         }
     };
 
+    const handleSaveAsArticle = async (title: string, content: string) => {
+        setArticleSaveLoading(true);
+        const articlesCopy = getArticlesCopy(locale);
+        try {
+            await contentApi.create({
+                title: title.slice(0, 500),
+                content: padArticleContent(content),
+            });
+            setArticlesRefresh((n) => n + 1);
+            setActiveTab('articles');
+            showToast(articlesCopy.saveSuccess, 'success');
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : articlesCopy.saveError;
+            showToast(message, 'error');
+        } finally {
+            setArticleSaveLoading(false);
+        }
+    };
+
+    const handleSaveHistoryAsArticle = async (item: HistoryItem) => {
+        const payload = buildArticleFromHistory(item);
+        if (!payload) {
+            showToast(getArticlesCopy(locale).saveError, 'error');
+            return;
+        }
+        await handleSaveAsArticle(payload.title, payload.content);
+    };
+
     const handleDocFile = useCallback((file: File) => {
         const extension = `.${file.name.split('.').pop()?.toLowerCase()}`;
         if (!['.txt', '.pdf', '.docx'].includes(extension)) {
@@ -1002,6 +1044,10 @@ export default function UnifiedDashboardPage() {
                         <HomeTab locale={locale} user={user} onTabChange={setActiveTab} />
                     )}
 
+                    {activeTab === 'articles' && (
+                        <ArticlesTab locale={locale} user={user} refreshToken={articlesRefresh} />
+                    )}
+
                     {activeTab === 'profile' && (
                         <ProfileTab
                             locale={locale}
@@ -1035,6 +1081,16 @@ export default function UnifiedDashboardPage() {
                             onContentChange={setValidateContent}
                             onValidate={handleValidate}
                             onReset={() => setValidateResult(null)}
+                            onSaveAsArticle={
+                                validateResult
+                                    ? () =>
+                                          void handleSaveAsArticle(
+                                              validateTitle || 'Проверка контента',
+                                              `${validateContent}\n\nОценка: ${validateResult.score}/100\nПроблемы: ${validateResult.issues.join('; ') || 'нет'}`,
+                                          )
+                                    : undefined
+                            }
+                            saveArticleLoading={articleSaveLoading}
                         />
                     )}
 
@@ -1049,6 +1105,16 @@ export default function UnifiedDashboardPage() {
                             onFileSelect={handleDocFile}
                             onAnalyze={handleDocAnalyze}
                             onReset={resetDoc}
+                            onSaveAsArticle={
+                                docResult
+                                    ? () =>
+                                          void handleSaveAsArticle(
+                                              docResult.filename,
+                                              [docResult.ai_summary, ...docResult.ai_recommendations].filter(Boolean).join('\n\n'),
+                                          )
+                                    : undefined
+                            }
+                            saveArticleLoading={articleSaveLoading}
                         />
                     )}
 
@@ -1063,6 +1129,15 @@ export default function UnifiedDashboardPage() {
                             onFileSelect={handleCsvFile}
                             onAnalyze={handleCsvAnalyze}
                             onReset={resetCsv}
+                            onSaveAsArticle={
+                                csvResult
+                                    ? () => {
+                                          const p = buildArticleFromCsvResult(csvResult);
+                                          void handleSaveAsArticle(p.title, p.content);
+                                      }
+                                    : undefined
+                            }
+                            saveArticleLoading={articleSaveLoading}
                         />
                     )}
 
@@ -1078,6 +1153,15 @@ export default function UnifiedDashboardPage() {
                             onFileSelect={handleImgFile}
                             onAnalyze={handleImgAnalyze}
                             onReset={resetImg}
+                            onSaveAsArticle={
+                                imgResult
+                                    ? () => {
+                                          const p = buildArticleFromImageResult(imgResult);
+                                          void handleSaveAsArticle(p.title, p.content);
+                                      }
+                                    : undefined
+                            }
+                            saveArticleLoading={articleSaveLoading}
                         />
                     )}
 
@@ -1092,6 +1176,15 @@ export default function UnifiedDashboardPage() {
                             onFileSelect={handleAudioFile}
                             onAnalyze={handleAudioAnalyze}
                             onReset={resetAudio}
+                            onSaveAsArticle={
+                                audioResult
+                                    ? () => {
+                                          const p = buildArticleFromAudioResult(audioResult);
+                                          void handleSaveAsArticle(p.title, p.content);
+                                      }
+                                    : undefined
+                            }
+                            saveArticleLoading={articleSaveLoading}
                         />
                     )}
 
@@ -1111,6 +1204,8 @@ export default function UnifiedDashboardPage() {
                             onNextPage={() => setHistoryPage((prev) => prev + 1)}
                             onExportPDF={handleExportPDF}
                             onDeleteHistory={handleDeleteHistory}
+                            onSaveAsArticle={(item) => void handleSaveHistoryAsArticle(item)}
+                            saveArticleLoading={articleSaveLoading}
                         />
                     )}
 
@@ -1234,10 +1329,21 @@ export default function UnifiedDashboardPage() {
                             onInputChange={setChatInput}
                             onSendMessage={handleSendMessage}
                             onResetChat={() => setChatMessages(getInitialChatMessages(locale).map((message) => ({ ...message, timestamp: new Date() })))}
+                            onSaveAsArticle={() => {
+                                const lastAssistant = [...chatMessages].reverse().find((m) => m.role === 'assistant');
+                                const lastUser = [...chatMessages].reverse().find((m) => m.role === 'user');
+                                if (!lastAssistant) return;
+                                const title = (lastUser?.content || 'AI диалог').slice(0, 80);
+                                const content = `Вопрос:\n${lastUser?.content || '—'}\n\nОтвет:\n${lastAssistant.content}`;
+                                void handleSaveAsArticle(title, content);
+                            }}
+                            saveArticleLoading={articleSaveLoading}
+                            canSaveAsArticle={chatMessages.some((m) => m.role === 'assistant')}
                         />
                     )}
                 </div>
             </main>
+            <ToastHost />
         </div>
     );
 }

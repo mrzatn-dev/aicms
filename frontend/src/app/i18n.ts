@@ -34,6 +34,10 @@ type HomePage = {
             title: string;
             description: string;
         };
+        articles: {
+            title: string;
+            description: string;
+        };
     };
     whyOurAi: string;
     whyDescription: string;
@@ -66,6 +70,7 @@ type HomePage = {
     getStarted: string;
     ready: string;
     createAccount: string;
+    readBlog: string;
     allLanguages: Record<LocaleCode, string>;
 };
 
@@ -104,6 +109,10 @@ const homePage: Record<LocaleCode, HomePage> = {
                 title: 'Анализ аудио',
                 description: 'Транскрибируйте аудиофайлы, получайте резюме, выделяйте ключевые темы и анализируйте качество звука.',
             },
+            articles: {
+                title: 'Статьи и блог',
+                description: 'Публикуйте материалы после AI-проверки. Читайте опубликованные статьи в открытом блоге.',
+            },
         },
         whyOurAi: 'Почему наш AI?',
         whyDescription: 'Все данные обрабатываются локально через наш API. Не нужно отправлять конфиденциальные документы в сторонние сервисы — всё работает в вашей инфраструктуре.',
@@ -114,6 +123,7 @@ const homePage: Record<LocaleCode, HomePage> = {
             'Оценка качества изображений',
             'Анализ аудио и транскрибация',
             'Валидация контента',
+            'Публикация статей в блоге',
             'Безопасное хранение данных',
         ],
         aiAssistant: 'AI Ассистент',
@@ -144,6 +154,7 @@ const homePage: Record<LocaleCode, HomePage> = {
         getStarted: 'Начните работать с AI сегодня',
         ready: 'Готовы к переменам?',
         createAccount: 'Создайте учётную запись бесплатно и начните использовать AI-инструменты прямо сейчас.',
+        readBlog: 'Читать блог',
         allLanguages: {
             ru: 'Русский',
             en: 'English',
@@ -184,6 +195,10 @@ const homePage: Record<LocaleCode, HomePage> = {
                 title: 'Audio Analysis',
                 description: 'Transcribe audio files, get summaries, identify key topics, and analyze sound quality.',
             },
+            articles: {
+                title: 'Articles & blog',
+                description: 'Publish content after AI review. Read published posts on the public blog.',
+            },
         },
         whyOurAi: 'Why Our AI?',
         whyDescription: 'All data is processed locally through our API. No need to send confidential documents to third-party services — everything works in your infrastructure.',
@@ -194,6 +209,7 @@ const homePage: Record<LocaleCode, HomePage> = {
             'Image quality assessment',
             'Audio analysis and transcription',
             'Content validation',
+            'Article publishing & blog',
             'Secure data storage',
         ],
         aiAssistant: 'AI Assistant',
@@ -224,6 +240,7 @@ const homePage: Record<LocaleCode, HomePage> = {
         getStarted: 'Start Working with AI Today',
         ready: 'Ready for Change?',
         createAccount: 'Create a free account and start using AI tools right now.',
+        readBlog: 'Read blog',
         allLanguages: {
             ru: 'Русский',
             en: 'English',
@@ -264,6 +281,10 @@ const homePage: Record<LocaleCode, HomePage> = {
                 title: 'Аудио талдауы',
                 description: 'Аудиофайлдарды транскрибтеңіз, қысқартпаларды алыңыз, негізгі тақырыптарды анықтаңыз және дыбыс сапасын талдаңыз.',
             },
+            articles: {
+                title: 'Мақалалар және блог',
+                description: 'AI тексерісінен кейін материалдарды жариялаңыз. Жарияланған мақалаларды блогта оқыңыз.',
+            },
         },
         whyOurAi: 'Неге біздің AI?',
         whyDescription: 'Барлық деректер біздің API арқасында локальды түрде өңделеді. Құпиялы құжаттарды үшінші тарапқа жіберудің қажеті жоқ — барлығы өзімізің инфрақұрылымында жұмыс істейді.',
@@ -274,6 +295,7 @@ const homePage: Record<LocaleCode, HomePage> = {
             'Кескін сапасын бағалау',
             'Аудио талдау және транскрипция',
             'Контент тексерісі',
+            'Мақалаларды блогта жариялау',
             'Қауіпсіз деректер сақтау',
         ],
         aiAssistant: 'AI Көмекші',
@@ -304,6 +326,7 @@ const homePage: Record<LocaleCode, HomePage> = {
         getStarted: 'Бүгін AI-мен жұмыс істегіңіз',
         ready: 'Өзгеруге дайынсыз ба?',
         createAccount: 'Бесплатты аккаунт құрыңыз және AI құралдарын қалай қолданыңыз.',
+        readBlog: 'Блогты оқу',
         allLanguages: {
             ru: 'Русский',
             en: 'English',

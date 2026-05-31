@@ -4,6 +4,7 @@ import type { RefObject } from 'react';
 
 import { AlertTriangle, CheckCircle2, HardDrive, Image as ImageIcon, Lightbulb, Loader2, Maximize2, Palette, ShieldAlert, Sparkles, Upload, X } from 'lucide-react';
 
+import { SaveArticleButton } from '../SaveArticleButton';
 import { getWorkspaceCopy } from '../../i18n';
 import type { ImageResult, LocaleCode } from '../../types';
 
@@ -18,6 +19,8 @@ interface ImageTabProps {
     onFileSelect: (file: File) => void;
     onAnalyze: () => void;
     onReset: () => void;
+    onSaveAsArticle?: () => void;
+    saveArticleLoading?: boolean;
 }
 
 export function ImageTab({
@@ -31,6 +34,8 @@ export function ImageTab({
     onFileSelect,
     onAnalyze,
     onReset,
+    onSaveAsArticle,
+    saveArticleLoading,
 }: ImageTabProps) {
     const copy = getWorkspaceCopy(locale).image;
 
@@ -100,7 +105,16 @@ export function ImageTab({
                                 </span>
                             </div>
                         </div>
-                        <button onClick={onReset} className="btn-secondary text-sm">{copy.new}</button>
+                        <div className="flex items-center gap-2">
+                            {onSaveAsArticle && (
+                                <SaveArticleButton
+                                    locale={locale}
+                                    loading={saveArticleLoading}
+                                    onClick={onSaveAsArticle}
+                                />
+                            )}
+                            <button onClick={onReset} className="btn-secondary text-sm">{copy.new}</button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

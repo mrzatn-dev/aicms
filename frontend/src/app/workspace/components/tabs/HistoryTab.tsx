@@ -2,6 +2,8 @@
 
 import { ChevronLeft, ChevronRight, Download, History, Loader2, Trash2 } from 'lucide-react';
 
+import { SaveArticleButton } from '../SaveArticleButton';
+
 import { getLocaleTag, getWorkspaceCopy } from '../../i18n';
 import { formatToolType } from '../../utils';
 import type { HistoryItem, LocaleCode } from '../../types';
@@ -18,6 +20,8 @@ interface HistoryTabProps {
     onNextPage: () => void;
     onExportPDF: (item: HistoryItem) => void;
     onDeleteHistory: (id: string) => void;
+    onSaveAsArticle?: (item: HistoryItem) => void;
+    saveArticleLoading?: boolean;
 }
 
 export function HistoryTab({
@@ -32,6 +36,8 @@ export function HistoryTab({
     onNextPage,
     onExportPDF,
     onDeleteHistory,
+    onSaveAsArticle,
+    saveArticleLoading,
 }: HistoryTabProps) {
     const copy = getWorkspaceCopy(locale).history;
     const localeTag = getLocaleTag(locale);
@@ -85,7 +91,15 @@ export function HistoryTab({
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                                        {onSaveAsArticle && (
+                                            <SaveArticleButton
+                                                locale={locale}
+                                                loading={saveArticleLoading}
+                                                onClick={() => onSaveAsArticle(item)}
+                                                className="!py-1.5 !px-2.5 text-xs"
+                                            />
+                                        )}
                                         <button
                                             onClick={() => onExportPDF(item)}
                                             className="p-2 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
