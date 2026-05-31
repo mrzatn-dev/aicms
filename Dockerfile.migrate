@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 COPY shared /app/shared
-COPY migrations /app/migrations
+COPY migrations/env.py migrations/script.py.mako migrations/versions /app/migrations/
 COPY scripts /app/scripts
 COPY alembic.ini apply_db.py /app/
 
