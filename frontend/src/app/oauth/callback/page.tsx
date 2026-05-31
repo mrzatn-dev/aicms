@@ -3,7 +3,9 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, XCircle } from 'lucide-react';
+
+import '@/app/workspace/workspace.css';
 
 function OAuthCallbackContent() {
   const searchParams = useSearchParams();
@@ -38,20 +40,23 @@ function OAuthCallbackContent() {
       });
   }, [searchParams, router]);
 
+  if (error) {
+    return (
+      <>
+        <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mb-2">
+          <XCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-semibold text-red-600 text-center">{error}</h2>
+        <p className="text-sm text-surface-500 text-center">Перенаправляем на страницу входа…</p>
+      </>
+    );
+  }
+
   return (
     <>
-      {error ? (
-        <>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#dc2626' }}>{error}</h2>
-          <p style={{ fontSize: '0.88rem', color: '#64748b' }}>Перенаправляем на страницу входа…</p>
-        </>
-      ) : (
-        <>
-          <Loader2 className="w-8 h-8 text-indigo-500" style={{ animation: 'auth-spin 0.7s linear infinite' }} />
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#0f172a' }}>Авторизация…</h2>
-          <p style={{ fontSize: '0.88rem', color: '#64748b' }}>Подождите, настраиваем ваш аккаунт</p>
-        </>
-      )}
+      <div className="workspace-loader mb-2" />
+      <h2 className="text-xl font-semibold text-surface-900 workspace-topbar-title">Авторизация…</h2>
+      <p className="text-sm text-surface-500 text-center">Подождите, настраиваем ваш аккаунт</p>
     </>
   );
 }
@@ -59,33 +64,26 @@ function OAuthCallbackContent() {
 function OAuthCallbackFallback() {
   return (
     <>
-      <Loader2 className="w-8 h-8 text-indigo-500" style={{ animation: 'auth-spin 0.7s linear infinite' }} />
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#0f172a' }}>Авторизация…</h2>
-      <p style={{ fontSize: '0.88rem', color: '#64748b' }}>Подождите, настраиваем ваш аккаунт</p>
+      <div className="workspace-loader mb-2" />
+      <h2 className="text-xl font-semibold text-surface-900 workspace-topbar-title">Авторизация…</h2>
+      <p className="text-sm text-surface-500 text-center">Подождите, настраиваем ваш аккаунт</p>
     </>
   );
 }
 
 export default function OAuthCallbackPage() {
   return (
-    <div className="auth-split-root" style={{ justifyContent: 'center' }}>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          gap: '1.5rem',
-          padding: '2rem',
-        }}
-      >
-        <div className="auth-logo-icon" style={{ width: '3.5rem', height: '3.5rem', borderRadius: '1rem' }}>
+    <div className="workspace-loader-wrap">
+      <div className="workspace-welcome-card rounded-2xl p-10 max-w-md w-full mx-4 flex flex-col items-center gap-3 relative overflow-hidden">
+        <div className="workspace-welcome-card__orb workspace-welcome-card__orb--1" />
+        <div className="workspace-welcome-card__orb workspace-welcome-card__orb--2" />
+        <div className="auth-logo-icon relative z-10 w-14 h-14 rounded-2xl">
           <Sparkles className="w-7 h-7 text-white" />
         </div>
-
         <Suspense fallback={<OAuthCallbackFallback />}>
-          <OAuthCallbackContent />
+          <div className="relative z-10 flex flex-col items-center gap-2 w-full">
+            <OAuthCallbackContent />
+          </div>
         </Suspense>
       </div>
     </div>

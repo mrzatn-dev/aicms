@@ -35,19 +35,21 @@ export function ChatTab({
 
     return (
         <div className="animate-fade-in flex flex-col" style={{ height: 'calc(100vh - 140px)' }}>
-            <div className="card p-4 mb-4 flex items-center gap-3 flex-shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+            <div className="workspace-welcome-card rounded-2xl p-4 mb-4 flex items-center gap-3 flex-shrink-0 relative overflow-hidden">
+                <div className="workspace-welcome-card__orb workspace-welcome-card__orb--1" style={{ width: 100, height: 100, top: -40, right: -20 }} />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-violet-500 flex items-center justify-center relative z-10 shadow-md">
                     <Bot className="w-5 h-5 text-white" />
                 </div>
-                <div>
+                <div className="relative z-10">
                     <h2 className="font-semibold text-surface-900">{copy.title}</h2>
                     <p className="text-xs text-emerald-600 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span> {copy.online}
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block animate-pulse" />
+                        {copy.online}
                     </p>
                 </div>
                 <button
                     onClick={onResetChat}
-                    className="ml-auto text-xs text-surface-400 hover:text-surface-700 px-3 py-1.5 rounded-lg hover:bg-surface-100 transition-colors"
+                    className="ml-auto relative z-10 text-xs text-surface-400 hover:text-surface-700 px-3 py-1.5 rounded-lg hover:bg-white/60 dark:hover:bg-surface-800/60 transition-colors"
                 >
                     {copy.clear}
                 </button>
