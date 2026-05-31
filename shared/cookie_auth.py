@@ -9,10 +9,15 @@ from fastapi import Request, Response
 from shared.config import settings
 
 AUTH_COOKIE_NAME = "access_token"
+REFRESH_COOKIE_NAME = "refresh_token"
 
 
 def _cookie_max_age() -> int:
     return int(timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES).total_seconds())
+
+
+def _refresh_cookie_max_age() -> int:
+    return int(timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS).total_seconds())
 
 
 def _cookie_secure(request: Request | None = None) -> bool:
@@ -41,8 +46,21 @@ def set_auth_cookie(response: Response, token: str, request: Request | None = No
     )
 
 
+def set_refresh_cookie(response: Response, token: str, request: Request | None = None) -> None:
+    """Attach refresh token as an HttpOnly cookie."""
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=_cookie_secure(request),
+        samesite="lax",
+        max_age=_refresh_cookie_max_age(),
+        path="/api/auth",
+    )
+
+
 def clear_auth_cookie(response: Response, request: Request | None = None) -> None:
-    """Remove the auth cookie."""
+    """Remove auth cookies."""
     response.delete_cookie(
         key=AUTH_COOKIE_NAME,
         path="/",
@@ -50,6 +68,18 @@ def clear_auth_cookie(response: Response, request: Request | None = None) -> Non
         secure=_cookie_secure(request),
         samesite="lax",
     )
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path="/api/auth",
+        httponly=True,
+        secure=_cookie_secure(request),
+        samesite="lax",
+    )
+
+
+def get_refresh_token_from_request(request: Request) -> str | None:
+    """Read refresh token from HttpOnly cookie."""
+    return request.cookies.get(REFRESH_COOKIE_NAME)
 
 
 def get_token_from_request(request: Request, authorization: str | None = None) -> str | None:

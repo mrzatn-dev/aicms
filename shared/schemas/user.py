@@ -21,6 +21,25 @@ class UserLogin(BaseModel):
     password: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Request password reset email."""
+
+    email: str = Field(min_length=5, max_length=255)
+
+
+class ResetPasswordRequest(BaseModel):
+    """Set a new password using a reset token."""
+
+    token: str = Field(min_length=16, max_length=256)
+    new_password: str = Field(min_length=6, max_length=128)
+
+
+class MessageResponse(BaseModel):
+    """Generic success message."""
+
+    detail: str
+
+
 class UserResponse(BaseModel):
     """Schema for user response."""
 

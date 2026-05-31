@@ -2,15 +2,14 @@
 API Gateway middleware: auth verification and rate limiting.
 """
 
-import time
 import logging
-from collections import defaultdict
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from shared.auth import decode_access_token
 from shared.cookie_auth import get_token_from_request
+from shared.rate_limit import rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +23,9 @@ PUBLIC_PATHS = {
     "/api/auth/register",
     "/api/auth/login",
     "/api/auth/logout",
+    "/api/auth/refresh",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
     "/api/auth/bootstrap-admin",
     "/api/auth/verify-email",
     "/api/auth/oauth-status",
@@ -39,6 +41,17 @@ PUBLIC_GET_PREFIXES = [
     "/api/categories",
     "/api/tags",
 ]
+
+# Per-path limits: (max_requests, window_seconds)
+AUTH_RATE_LIMITS: dict[str, tuple[int, int]] = {
+    "/api/auth/login": (10, 60),
+    "/api/auth/register": (5, 300),
+    "/api/auth/forgot-password": (3, 3600),
+    "/api/auth/reset-password": (5, 3600),
+    "/api/auth/refresh": (30, 60),
+}
+
+DEFAULT_RATE_LIMIT = (100, 60)
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -94,32 +107,23 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory rate limiting middleware."""
-
-    def __init__(self, app, max_requests: int = 100, window_seconds: int = 60):
-        super().__init__(app)
-        self.max_requests = max_requests
-        self.window_seconds = window_seconds
-        self.requests: dict[str, list[float]] = defaultdict(list)
+    """Redis-backed rate limiting with in-memory fallback."""
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         client_ip = request.client.host if request.client else "unknown"
-        now = time.time()
+        path = request.url.path
+        max_requests, window_seconds = AUTH_RATE_LIMITS.get(path, DEFAULT_RATE_LIMIT)
+        key = f"{client_ip}:{path}"
 
-        # Clean old entries
-        self.requests[client_ip] = [
-            t for t in self.requests[client_ip]
-            if now - t < self.window_seconds
-        ]
-
-        if len(self.requests[client_ip]) >= self.max_requests:
-            logger.warning("Rate limit exceeded for %s", client_ip)
+        if not await rate_limiter.allow(key, max_requests, window_seconds):
+            logger.warning("Rate limit exceeded for %s on %s", client_ip, path)
             return Response(
                 content='{"detail":"Rate limit exceeded. Try again later."}',
                 status_code=429,
                 media_type="application/json",
             )
 
-        self.requests[client_ip].append(now)
-        response = await call_next(request)
-        return response
+        return await call_next(request)

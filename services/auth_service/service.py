@@ -22,7 +22,14 @@ from shared.auth import hash_password, verify_password, create_access_token
 from shared.models.user import UserRole
 
 from repository import UserRepository
-from email_service import send_verification_email
+from email_service import send_password_reset_email, send_verification_email
+
+
+def _frontend_base_url() -> str:
+    configured = (settings.OAUTH_REDIRECT_URI or "").strip().rstrip("/")
+    if configured.endswith("/oauth/callback"):
+        return configured[: -len("/oauth/callback")]
+    return configured or "http://localhost:3000"
 
 
 class AuthService:
@@ -163,6 +170,87 @@ class AuthService:
             candidate = f"{base}{suffix}"
             suffix += 1
         return candidate
+
+    async def request_password_reset(self, email: str) -> dict[str, str]:
+        """Send password reset link if the account exists (always returns generic message)."""
+        user = await self.user_repo.get_by_email(email)
+        if user and user.is_active and user.hashed_password:
+            token = secrets.token_urlsafe(32)
+            expires = datetime.now(timezone.utc) + timedelta(hours=1)
+            await self.user_repo.update(
+                user.id,
+                password_reset_token=token,
+                password_reset_expires=expires,
+            )
+            reset_url = f"{_frontend_base_url().rstrip('/')}/reset-password?token={token}"
+            try:
+                await send_password_reset_email(to_email=user.email, reset_url=reset_url)
+            except RuntimeError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=str(exc),
+                ) from exc
+
+        return {
+            "detail": "Если аккаунт с таким email существует, мы отправили ссылку для сброса пароля",
+        }
+
+    async def reset_password(self, token: str, new_password: str) -> dict[str, str]:
+        """Set a new password using a valid reset token."""
+        user = await self.user_repo.get_by_password_reset_token(token)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset link",
+            )
+        if (
+            user.password_reset_expires
+            and user.password_reset_expires < datetime.now(timezone.utc)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Reset link expired",
+            )
+
+        await self.user_repo.update(
+            user.id,
+            hashed_password=hash_password(new_password),
+            password_reset_token=None,
+            password_reset_expires=None,
+        )
+        return {"detail": "Password updated successfully"}
+
+    async def refresh_session(
+        self, refresh_token: str
+    ) -> TokenResponse:
+        """Issue new access token from a valid refresh token."""
+        from shared.refresh_tokens import consume_refresh_token, revoke_refresh_token
+
+        session = await consume_refresh_token(refresh_token)
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token",
+            )
+
+        await revoke_refresh_token(refresh_token)
+
+        user = await self.user_repo.get_by_id(uuid.UUID(session["sub"]))
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Account unavailable",
+            )
+
+        access_token = create_access_token(
+            user_id=user.id,
+            email=user.email,
+            role=user.role.value,
+        )
+        return TokenResponse(
+            access_token=access_token,
+            user=UserResponse.model_validate(user),
+        )
 
     async def login(self, credentials: UserLogin) -> TokenResponse:
         """Authenticate user and return JWT token."""

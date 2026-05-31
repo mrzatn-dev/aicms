@@ -55,12 +55,26 @@ class RedisCache:
             return
         await self.client.set(key, json.dumps(value, default=str), ex=ttl)
 
+    async def delete(self, key: str) -> None:
+        if self.client is None:
+            return
+        await self.client.delete(key)
+
     async def delete_pattern(self, pattern: str) -> None:
         if self.client is None:
             return
         keys = await self.client.keys(pattern)
         if keys:
             await self.client.delete(*keys)
+
+    async def incr(self, key: str, ttl: int) -> int:
+        """Increment a counter with TTL on first hit (fixed window)."""
+        if self.client is None:
+            return 0
+        count = await self.client.incr(key)
+        if count == 1:
+            await self.client.expire(key, ttl)
+        return int(count)
 
 
 redis_cache = RedisCache()

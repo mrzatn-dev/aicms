@@ -30,10 +30,15 @@ from shared.schemas.user import (
     RegisterPendingResponse,
     AdminBootstrapRequest,
     AdminBootstrapResponse,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    MessageResponse,
 )
 from shared.auth import get_current_user, require_admin
 from shared.service_auth import add_service_auth_middleware
-from shared.cookie_auth import set_auth_cookie, clear_auth_cookie
+from shared.cookie_auth import clear_auth_cookie, get_refresh_token_from_request
+from shared.auth_response import build_token_response
+from shared.refresh_tokens import revoke_refresh_token
 
 from service import AuthService
 from repository import UserRepository
@@ -73,10 +78,11 @@ def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthServic
     return AuthService(UserRepository(session))
 
 
-def _token_response(token_response: TokenResponse) -> JSONResponse:
-    response = JSONResponse(content=token_response.model_dump(mode="json"))
-    set_auth_cookie(response, token_response.access_token)
-    return response
+async def _token_response(
+    token_response: TokenResponse,
+    request: Request | None = None,
+) -> JSONResponse:
+    return await build_token_response(token_response, request)
 
 
 @app.get("/health")
@@ -109,6 +115,7 @@ async def oauth_status(request: Request):
 
 @app.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
+    request: Request,
     user_data: UserCreate,
     auth_service: AuthService = Depends(get_auth_service),
 ):
@@ -116,7 +123,7 @@ async def register(
     result = await auth_service.register(user_data)
     if isinstance(result, RegisterPendingResponse):
         return JSONResponse(content=result.model_dump(mode="json"), status_code=201)
-    return _token_response(result)
+    return await _token_response(result, request)
 
 
 @app.get("/verify-email")
@@ -178,18 +185,60 @@ async def bootstrap_admin(
 
 @app.post("/login")
 async def login(
+    request: Request,
     credentials: UserLogin,
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """Login and receive JWT token (also set as HttpOnly cookie)."""
-    return _token_response(await auth_service.login(credentials))
+    return await _token_response(await auth_service.login(credentials), request)
+
+
+@app.post("/refresh")
+async def refresh_session(
+    request: Request,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Rotate refresh token and issue a new access token."""
+    refresh_token = get_refresh_token_from_request(request)
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token missing",
+        )
+    return await _token_response(
+        await auth_service.refresh_session(refresh_token),
+        request,
+    )
+
+
+@app.post("/forgot-password", response_model=MessageResponse)
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Request a password reset email."""
+    result = await auth_service.request_password_reset(body.email)
+    return MessageResponse(**result)
+
+
+@app.post("/reset-password", response_model=MessageResponse)
+async def reset_password(
+    body: ResetPasswordRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Set a new password using a reset token."""
+    result = await auth_service.reset_password(body.token, body.new_password)
+    return MessageResponse(**result)
 
 
 @app.post("/logout")
-async def logout():
-    """Clear the auth cookie."""
+async def logout(request: Request):
+    """Clear auth cookies and revoke refresh token."""
+    refresh_token = get_refresh_token_from_request(request)
+    if refresh_token:
+        await revoke_refresh_token(refresh_token)
     response = JSONResponse(content={"detail": "Logged out"})
-    clear_auth_cookie(response)
+    clear_auth_cookie(response, request)
     return response
 
 

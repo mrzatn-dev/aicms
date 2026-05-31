@@ -8,6 +8,10 @@ interface RequestOptions {
     method?: string;
     body?: any;
     headers?: Record<string, string>;
+    /** Internal: prevent infinite refresh loops */
+    _retry?: boolean;
+    /** Do not attempt refresh on 401 (login, register, etc.) */
+    skipRefresh?: boolean;
 }
 
 class ApiClient {
@@ -96,12 +100,32 @@ class ApiClient {
             if (!response.ok) {
                 const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
                 const errorDetail = error.detail || `HTTP ${response.status}`;
-                if (response.status === 401) {
+                if (
+                    response.status === 401 &&
+                    !options._retry &&
+                    !options.skipRefresh &&
+                    endpoint !== '/api/auth/refresh'
+                ) {
+                    const refreshed = await this.tryRefresh();
+                    if (refreshed) {
+                        return this.request<T>(endpoint, { ...options, _retry: true });
+                    }
                     this.sessionActive = false;
                     if (typeof window !== 'undefined') {
                         localStorage.removeItem('user');
                     }
                     throw new Error('Сессия истекла. Пожалуйста, войдите снова.');
+                }
+                if (response.status === 401) {
+                    this.sessionActive = false;
+                    if (typeof window !== 'undefined') {
+                        localStorage.removeItem('user');
+                    }
+                    throw new Error(
+                        typeof errorDetail === 'string'
+                            ? errorDetail
+                            : 'Сессия истекла. Пожалуйста, войдите снова.',
+                    );
                 }
                 throw new Error(errorDetail);
             }
@@ -127,10 +151,43 @@ class ApiClient {
     }
 
     // ─── Auth API ───────────────────────────────────────────
+    async tryRefresh(): Promise<boolean> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/auth/refresh`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+            if (!response.ok) {
+                return false;
+            }
+            this.markSessionActive(true);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async forgotPassword(email: string) {
+        return this.request<{ detail: string }>('/api/auth/forgot-password', {
+            method: 'POST',
+            body: { email },
+            skipRefresh: true,
+        });
+    }
+
+    async resetPassword(token: string, newPassword: string) {
+        return this.request<{ detail: string }>('/api/auth/reset-password', {
+            method: 'POST',
+            body: { token, new_password: newPassword },
+            skipRefresh: true,
+        });
+    }
+
     async login(email: string, password: string) {
         const response = await this.request<any>('/api/auth/login', {
             method: 'POST',
             body: { email, password },
+            skipRefresh: true,
         });
         this.markSessionActive(true);
         return response;
@@ -145,6 +202,7 @@ class ApiClient {
         const response = await this.request<any>('/api/auth/register', {
             method: 'POST',
             body: userData,
+            skipRefresh: true,
         });
         this.markSessionActive(true);
         return response;

@@ -73,6 +73,13 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_password_reset_token(self, token: str) -> User | None:
+        """Find user by active password reset token."""
+        result = await self.session.execute(
+            select(User).where(User.password_reset_token == token)
+        )
+        return result.scalar_one_or_none()
+
     async def list_all(
         self, skip: int = 0, limit: int = 50
     ) -> Sequence[User]:

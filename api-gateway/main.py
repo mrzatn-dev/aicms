@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 
 from shared.config import as_http_url, settings
 from shared.observability import ServiceObservabilityMiddleware
+from shared.redis_cache import redis_cache
 
 from middleware import AuthMiddleware, RateLimitMiddleware
 from router import register_routes
@@ -40,8 +41,10 @@ async def lifespan(app: FastAPI):
         "set" if settings.GOOGLE_CLIENT_SECRET else "MISSING",
     )
     app.state.http_client = httpx.AsyncClient(timeout=30.0)
+    await redis_cache.connect()
     yield
     await app.state.http_client.aclose()
+    await redis_cache.disconnect()
     logger.info("API Gateway shutting down...")
 
 
@@ -61,7 +64,7 @@ app.add_middleware(
 )
 
 # Add rate limiting middleware
-app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
+app.add_middleware(RateLimitMiddleware)
 
 # Require JWT for protected routes (added last = runs first in the stack)
 app.add_middleware(AuthMiddleware)

@@ -17,7 +17,9 @@ from fastapi import HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 
 from shared.config import settings
-from shared.cookie_auth import set_auth_cookie
+from shared.cookie_auth import set_auth_cookie, set_refresh_cookie
+from shared.refresh_tokens import issue_refresh_token
+from shared.schemas.user import TokenResponse
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -80,13 +82,22 @@ def provider_callback_url(provider: str, request: Request | None = None) -> str:
     return f"{base}/api/auth/callback/{provider}"
 
 
-def frontend_redirect_success(token: str, request: Request | None = None) -> RedirectResponse:
-    """Redirect to frontend after OAuth; JWT is stored in an HttpOnly cookie."""
+async def frontend_redirect_success(
+    token_response: TokenResponse,
+    request: Request | None = None,
+) -> RedirectResponse:
+    """Redirect to frontend after OAuth; JWT is stored in HttpOnly cookies."""
     response = RedirectResponse(
         url=f"{get_frontend_oauth_callback_url(request)}?oauth=success",
         status_code=status.HTTP_302_FOUND,
     )
-    set_auth_cookie(response, token, request)
+    set_auth_cookie(response, token_response.access_token, request)
+    refresh_token = await issue_refresh_token(
+        user_id=token_response.user.id,
+        email=token_response.user.email,
+        role=token_response.user.role,
+    )
+    set_refresh_cookie(response, refresh_token, request)
     return response
 
 
@@ -230,7 +241,7 @@ async def handle_google_callback(
         username_hint = (profile.get("email") or "user").split("@")[0]
         full_name = profile.get("name")
         token_response = await auth_service.oauth_login(email, username_hint, full_name)
-        return frontend_redirect_success(token_response.access_token, request)
+        return await frontend_redirect_success(token_response, request)
     except HTTPException as exc:
         return RedirectResponse(
             url=frontend_redirect_with_error(str(exc.detail), request),
@@ -351,7 +362,7 @@ async def handle_github_callback(
         username_hint = profile.get("login") or email.split("@")[0]
         full_name = profile.get("name")
         token_response = await auth_service.oauth_login(email, username_hint, full_name)
-        return frontend_redirect_success(token_response.access_token, request)
+        return await frontend_redirect_success(token_response, request)
     except HTTPException as exc:
         return RedirectResponse(
             url=frontend_redirect_with_error(str(exc.detail), request),
