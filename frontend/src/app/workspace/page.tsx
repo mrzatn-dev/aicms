@@ -1,5 +1,7 @@
 'use client';
 
+import './workspace.css';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -649,27 +651,51 @@ export default function UnifiedDashboardPage() {
         setChatInput('');
         setChatLoading(true);
 
+        const assistantMessage: ChatMessage = {
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+        };
+        setChatMessages((prev) => [...prev, assistantMessage]);
+
         try {
-            const response = await api.chatAI(userMessage.content, history, locale);
-            const assistantMessage: ChatMessage = {
-                role: 'assistant',
-                content: response.reply,
-                timestamp: new Date(),
-            };
-            setChatMessages((prev) => [...prev, assistantMessage]);
+            let fullReply = '';
+            fullReply = await api.chatAIStream(userMessage.content, history, locale, (delta) => {
+                setChatMessages((prev) => {
+                    const updated = [...prev];
+                    const last = updated[updated.length - 1];
+                    if (last?.role === 'assistant') {
+                        updated[updated.length - 1] = { ...last, content: last.content + delta };
+                    }
+                    return updated;
+                });
+            });
             await persistHistory({
                 tool_type: 'chat',
                 input_data: { message: userMessage.content },
-                result_data: { reply: response.reply },
+                result_data: { reply: fullReply },
                 title: userMessage.content.slice(0, 50) + (userMessage.content.length > 50 ? '...' : ''),
             });
         } catch (error: any) {
-            const errorMessage: ChatMessage = {
-                role: 'assistant',
-                content: `Ошибка: ${error.message || 'Не удалось получить ответ'}`,
-                timestamp: new Date(),
-            };
-            setChatMessages((prev) => [...prev, errorMessage]);
+            setChatMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.role === 'assistant' && !last.content) {
+                    updated[updated.length - 1] = {
+                        ...last,
+                        content: `Ошибка: ${error.message || 'Не удалось получить ответ'}`,
+                    };
+                    return updated;
+                }
+                return [
+                    ...prev,
+                    {
+                        role: 'assistant',
+                        content: `Ошибка: ${error.message || 'Не удалось получить ответ'}`,
+                        timestamp: new Date(),
+                    },
+                ];
+            });
         } finally {
             setChatLoading(false);
         }
@@ -926,15 +952,16 @@ export default function UnifiedDashboardPage() {
 
     if (!user) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+            <div className="workspace-loader-wrap">
+                <div className="workspace-loader" />
+                <p className="workspace-loader-text">Загрузка workspace…</p>
             </div>
         );
     }
 
     return (
         <div
-            className="min-h-screen bg-surface-50 flex"
+            className="workspace-shell min-h-screen flex"
             style={{ fontSize: fontSizeMap[settingsForm.custom_settings.ui_font_size] || '16px' }}
         >
             <WorkspaceSidebar
@@ -952,7 +979,10 @@ export default function UnifiedDashboardPage() {
             />
 
             {mobileMenuOpen && (
-                <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
+                <div
+                    className="workspace-mobile-overlay fixed inset-0 bg-black/40 z-30 lg:hidden"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
             )}
 
             <main className="flex-1 min-w-0 overflow-y-auto">
@@ -964,7 +994,10 @@ export default function UnifiedDashboardPage() {
                     onOpenMobileMenu={() => setMobileMenuOpen(true)}
                 />
 
-                <div className={`max-w-6xl mx-auto ${settingsForm.custom_settings.compact_mode ? 'p-4' : 'p-6'}`}>
+                <div
+                    key={activeTab}
+                    className={`workspace-tab-panel max-w-6xl mx-auto ${settingsForm.custom_settings.compact_mode ? 'p-4' : 'p-6'}`}
+                >
                     {activeTab === 'home' && (
                         <HomeTab locale={locale} user={user} onTabChange={setActiveTab} />
                     )}

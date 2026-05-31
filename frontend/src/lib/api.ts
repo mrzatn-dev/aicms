@@ -195,6 +195,70 @@ class ApiClient {
         });
     }
 
+    async chatAIStream(
+        message: string,
+        history: Array<{ role: string; content: string }>,
+        language = 'ru',
+        onDelta?: (delta: string) => void,
+    ): Promise<string> {
+        const requestHeaders: Record<string, string> = {
+            'Content-Type': 'application/json',
+        };
+
+        const interfaceLanguage = this.getInterfaceLanguage();
+        if (interfaceLanguage) {
+            requestHeaders['X-Interface-Language'] = interfaceLanguage;
+        }
+
+        const response = await fetch(`${this.baseUrl}/api/ai/chat/stream`, {
+            method: 'POST',
+            headers: requestHeaders,
+            credentials: 'include',
+            body: JSON.stringify({ message, history, language }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+            throw new Error(error.detail || `HTTP ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error('Streaming not supported');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullReply = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const payload = line.slice(6).trim();
+                if (payload === '[DONE]') continue;
+
+                try {
+                    const parsed = JSON.parse(payload);
+                    if (parsed.delta) {
+                        fullReply += parsed.delta;
+                        onDelta?.(parsed.delta);
+                    }
+                } catch {
+                    // ignore malformed SSE chunks
+                }
+            }
+        }
+
+        return fullReply;
+    }
+
     async validateContent(data: { title: string; content: string; language?: string }) {
         // Quick AI moderation check (profanity / threats / self-harm etc.)
         // Proxied to ai-service POST /validate-content via API Gateway

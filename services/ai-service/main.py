@@ -6,6 +6,7 @@ Runs on port 8004.
 import sys
 import os
 import logging
+import json
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -13,6 +14,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
@@ -34,6 +36,7 @@ from shared.schemas.ai_analysis import (
 from shared.broker import broker, AI_ANALYSIS_QUEUE
 from shared.auth import require_admin, get_current_user, require_user_or_internal
 from shared.service_auth import add_service_auth_middleware
+from shared.observability import ServiceObservabilityMiddleware
 
 from service import AIAnalysisService
 
@@ -90,6 +93,7 @@ app.add_middleware(
 )
 
 add_service_auth_middleware(app)
+app.add_middleware(ServiceObservabilityMiddleware, service_name="ai-service")
 
 
 def get_ai_service(
@@ -164,6 +168,31 @@ async def ai_chat(
     """AI chat assistant for CMS help."""
     history = [msg.model_dump() for msg in request.history] if request.history else None
     return await service.chat(message=request.message, history=history, language=request.language)
+
+
+@app.post("/chat/stream")
+async def ai_chat_stream(
+    request: AIChatRequest,
+    current_user: dict = Depends(get_current_user),
+    service: AIAnalysisService = Depends(get_ai_service),
+):
+    """Stream AI chat assistant response via Server-Sent Events."""
+    history = [msg.model_dump() for msg in request.history] if request.history else None
+
+    async def event_generator():
+        async for chunk in service.chat_stream(
+            message=request.message,
+            history=history,
+            language=request.language,
+        ):
+            yield f"data: {json.dumps({'delta': chunk}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/validate-content", response_model=AIValidationResponse)

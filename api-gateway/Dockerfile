@@ -11,7 +11,7 @@ COPY shared /app/shared
 
 # Alembic migrations (run before serving auth routes)
 COPY migrations /app/migrations
-COPY alembic.ini apply_db.py /app/
+COPY alembic.ini apply_db.py create_admin.py /app/
 
 # Auth is mounted in-process by the gateway
 COPY services/auth_service /app/services/auth_service

@@ -5,14 +5,24 @@ Auth service business logic.
 import re
 import secrets
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 
-from shared.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse, UserUpdate
+from shared.config import settings
+from shared.schemas.user import (
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    TokenResponse,
+    UserUpdate,
+    RegisterPendingResponse,
+)
 from shared.auth import hash_password, verify_password, create_access_token
 from shared.models.user import UserRole
 
 from repository import UserRepository
+from email_service import send_verification_email
 
 
 class AuthService:
@@ -21,9 +31,8 @@ class AuthService:
     def __init__(self, user_repo: UserRepository):
         self.user_repo = user_repo
 
-    async def register(self, user_data: UserCreate) -> TokenResponse:
-        """Register a new user and return JWT token."""
-        # Check if email already exists
+    async def register(self, user_data: UserCreate) -> TokenResponse | RegisterPendingResponse:
+        """Register a new user and return JWT or pending verification response."""
         existing = await self.user_repo.get_by_email(user_data.email)
         if existing:
             raise HTTPException(
@@ -31,7 +40,6 @@ class AuthService:
                 detail="Email already registered",
             )
 
-        # Check if username already exists
         existing = await self.user_repo.get_by_username(user_data.username)
         if existing:
             raise HTTPException(
@@ -39,16 +47,43 @@ class AuthService:
                 detail="Username already taken",
             )
 
-        # Create user
         hashed_pw = hash_password(user_data.password)
+
+        if settings.EMAIL_VERIFICATION_ENABLED:
+            token = secrets.token_urlsafe(32)
+            expires = datetime.now(timezone.utc) + timedelta(hours=24)
+            user = await self.user_repo.create(
+                email=user_data.email,
+                username=user_data.username,
+                hashed_password=hashed_pw,
+                full_name=user_data.full_name,
+                email_verified=False,
+                verification_token=token,
+                verification_token_expires=expires,
+            )
+            verify_url = (
+                f"{settings.OAUTH_API_BASE_URL.rstrip('/')}/verify-email?token={token}"
+            )
+            try:
+                await send_verification_email(to_email=user.email, verify_url=verify_url)
+            except RuntimeError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=str(exc),
+                ) from exc
+            return RegisterPendingResponse(
+                message="Проверьте почту и перейдите по ссылке для подтверждения email",
+                email=user.email,
+            )
+
         user = await self.user_repo.create(
             email=user_data.email,
             username=user_data.username,
             hashed_password=hashed_pw,
             full_name=user_data.full_name,
+            email_verified=True,
         )
 
-        # Generate token
         token = create_access_token(
             user_id=user.id,
             email=user.email,
@@ -59,6 +94,31 @@ class AuthService:
             access_token=token,
             user=UserResponse.model_validate(user),
         )
+
+    async def verify_email(self, token: str) -> dict[str, str]:
+        """Confirm email address using a verification token."""
+        user = await self.user_repo.get_by_verification_token(token)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification link",
+            )
+        if (
+            user.verification_token_expires
+            and user.verification_token_expires < datetime.now(timezone.utc)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification link expired",
+            )
+
+        await self.user_repo.update(
+            user.id,
+            email_verified=True,
+            verification_token=None,
+            verification_token_expires=None,
+        )
+        return {"detail": "Email verified successfully"}
 
     async def oauth_login(
         self,
@@ -82,6 +142,7 @@ class AuthService:
                 username=username,
                 hashed_password=hash_password(random_password),
                 full_name=full_name,
+                email_verified=True,
             )
 
         token = create_access_token(
@@ -116,6 +177,12 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is deactivated",
+            )
+
+        if settings.EMAIL_VERIFICATION_ENABLED and not user.email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email not verified. Check your inbox for the confirmation link.",
             )
 
         token = create_access_token(

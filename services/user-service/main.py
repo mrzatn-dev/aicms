@@ -21,6 +21,7 @@ from shared.database import get_session
 from shared.auth import get_current_user, require_admin
 from shared.broker import broker
 from shared.service_auth import add_service_auth_middleware
+from shared.observability import ServiceObservabilityMiddleware
 from shared.schemas.history import UserAIHistoryCreate, UserAIHistoryResponse, UserAIHistoryList
 from shared.schemas.settings import UserSettingsUpdate, UserSettingsResponse
 from shared.schemas.statistics import UserStatistics
@@ -68,6 +69,7 @@ app.add_middleware(
 )
 
 add_service_auth_middleware(app)
+app.add_middleware(ServiceObservabilityMiddleware, service_name="user-service")
 
 
 def get_user_service(session: AsyncSession = Depends(get_session)) -> UserService:

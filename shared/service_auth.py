@@ -26,8 +26,13 @@ SERVICE_PUBLIC_PATHS = {
     "/register",
     "/login",
     "/logout",
+    "/bootstrap-admin",
+    "/verify-email",
+    "/oauth-status",
     "/google",
     "/callback/google",
+    "/github",
+    "/callback/github",
 }
 
 

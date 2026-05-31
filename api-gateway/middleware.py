@@ -24,8 +24,13 @@ PUBLIC_PATHS = {
     "/api/auth/register",
     "/api/auth/login",
     "/api/auth/logout",
+    "/api/auth/bootstrap-admin",
+    "/api/auth/verify-email",
+    "/api/auth/oauth-status",
     "/api/auth/google",
     "/api/auth/callback/google",
+    "/api/auth/github",
+    "/api/auth/callback/github",
 }
 
 # Paths that are public for GET only

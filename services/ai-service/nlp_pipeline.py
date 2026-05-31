@@ -5,6 +5,7 @@ NLP Pipeline - Text analysis using DeepSeek API (OpenAI-compatible).
 import json
 import logging
 import re
+from typing import AsyncIterator
 from openai import AsyncOpenAI, APIStatusError
 from pydantic import BaseModel, Field
 
@@ -213,13 +214,13 @@ class NLPPipeline:
             logger.exception("Error during DeepSeek SEO generation: %s", str(e))
             return {"title": "", "meta_description": str(e), "keywords": []}
 
-    async def chat(
+    async def _build_chat_messages(
         self,
         message: str,
         history: list[dict] | None = None,
         language: str = "ru",
-    ) -> dict:
-        """Handle conversational AI chat for CMS assistance."""
+    ) -> tuple[list[dict], str]:
+        """Build OpenAI messages list and fallback reply for unavailable client."""
         language_map = {
             "ru": "Russian",
             "en": "English",
@@ -227,15 +228,14 @@ class NLPPipeline:
         }
         target_language = language_map.get(language, "Russian")
         if not self.client:
-            return {
-                "reply": (
-                    "AI assistant is currently unavailable. Please contact the administrator."
-                    if language == "en"
-                    else "AI көмекшісі қазір қолжетімсіз. Әкімшіге хабарласыңыз."
-                    if language == "kk"
-                    else "AI ассистент сейчас недоступен (API ключ не настроен). Пожалуйста, обратитесь к администратору."
-                )
-            }
+            fallback = (
+                "AI assistant is currently unavailable. Please contact the administrator."
+                if language == "en"
+                else "AI көмекшісі қазір қолжетімсіз. Әкімшіге хабарласыңыз."
+                if language == "kk"
+                else "AI ассистент сейчас недоступен (API ключ не настроен). Пожалуйста, обратитесь к администратору."
+            )
+            return [], fallback
 
         system_context = (
             "You are an AI assistant for a Content Management System (CMS). Your name is \"AI Helper\".\n"
@@ -256,15 +256,23 @@ class NLPPipeline:
         )
 
         messages = [{"role": "system", "content": system_context}]
-
-        # Add conversation history
         if history:
             for msg in history:
                 role = "assistant" if msg["role"] == "assistant" else "user"
                 messages.append({"role": role, "content": msg["content"]})
-
-        # Add the current message
         messages.append({"role": "user", "content": message})
+        return messages, ""
+
+    async def chat(
+        self,
+        message: str,
+        history: list[dict] | None = None,
+        language: str = "ru",
+    ) -> dict:
+        """Handle conversational AI chat for CMS assistance."""
+        messages, fallback = await self._build_chat_messages(message, history, language)
+        if not messages:
+            return {"reply": fallback}
 
         try:
             raw = await self._chat(messages)
@@ -297,6 +305,56 @@ class NLPPipeline:
                     else "Извините, произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте позже."
                 )
             }
+
+    async def chat_stream(
+        self,
+        message: str,
+        history: list[dict] | None = None,
+        language: str = "ru",
+    ) -> AsyncIterator[str]:
+        """Stream conversational AI chat tokens for SSE."""
+        messages, fallback = await self._build_chat_messages(message, history, language)
+        if not messages:
+            yield fallback
+            return
+
+        try:
+            stream = await self.client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=messages,
+                temperature=0.3,
+                stream=True,
+            )
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield delta
+        except APIStatusError as e:
+            if e.status_code == 402:
+                msg = "Извините, у сервиса ИИ закончился баланс (402). Обратитесь к администратору."
+                if language == "en":
+                    msg = "The AI service has insufficient balance (402). Please contact the administrator."
+                elif language == "kk":
+                    msg = "AI сервисінің балансы жеткіліксіз (402). Әкімшіге хабарласыңыз."
+            else:
+                msg = (
+                    f"AI service API error: {e.status_code}"
+                    if language == "en"
+                    else f"AI сервис API қатесі: {e.status_code}"
+                    if language == "kk"
+                    else f"Ошибка API сервиса ИИ: {e.status_code}"
+                )
+            logger.error("DeepSeek API Error during chat stream: %s", msg)
+            yield msg
+        except Exception as e:
+            logger.exception("Error during DeepSeek chat stream: %s", str(e))
+            yield (
+                "Sorry, an error occurred while processing your request. Please try again later."
+                if language == "en"
+                else "Сұрауыңызды өңдеу кезінде қате пайда болды. Кейінірек қайталап көріңіз."
+                if language == "kk"
+                else "Извините, произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте позже."
+            )
 
     async def validate_user_input(self, title: str, content: str, language: str = "ru") -> dict:
         """Moderation validation (profanity / threats / self-harm / toxicity) with AI + deterministic fallback."""

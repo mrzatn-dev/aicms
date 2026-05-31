@@ -34,6 +34,11 @@ class User(Base):
         SAEnum(UserRole, native_enum=False, length=20), default=UserRole.USER, nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    verification_token: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    verification_token_expires: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

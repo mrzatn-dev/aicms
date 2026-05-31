@@ -12,6 +12,6 @@ export function getApiBaseUrl(): string {
   return configured || 'http://localhost:3000';
 }
 
-export function getOAuthStartUrl(provider: 'google'): string {
+export function getOAuthStartUrl(provider: 'google' = 'google'): string {
   return `${getApiBaseUrl()}/api/auth/${provider}`;
 }

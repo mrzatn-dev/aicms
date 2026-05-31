@@ -20,8 +20,19 @@ async function proxyRequest(request: NextRequest, path: string[]) {
   const target = getProxyTarget();
   const pathname = `/api/${path.join('/')}`;
   const url = `${target}${pathname}${request.nextUrl.search}`;
+  const isStream = pathname.endsWith('/chat/stream');
 
   const headers = new Headers(request.headers);
+  const publicHost =
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    request.nextUrl.host;
+  const publicProto =
+    request.headers.get('x-forwarded-proto') ||
+    request.nextUrl.protocol.replace(':', '') ||
+    'https';
+  headers.set('x-forwarded-host', publicHost);
+  headers.set('x-forwarded-proto', publicProto);
   headers.delete('host');
 
   const init: RequestInit & { duplex?: 'half' } = {
@@ -37,6 +48,17 @@ async function proxyRequest(request: NextRequest, path: string[]) {
 
   try {
     const upstream = await fetch(url, init);
+
+    if (isStream && upstream.body) {
+      const responseHeaders = new Headers(upstream.headers);
+      responseHeaders.delete('connection');
+      return new NextResponse(upstream.body, {
+        status: upstream.status,
+        statusText: upstream.statusText,
+        headers: responseHeaders,
+      });
+    }
+
     const body = await upstream.arrayBuffer();
 
     const responseHeaders = new Headers(upstream.headers);

@@ -49,25 +49,43 @@ export default function AIChatWidget() {
         setInput('');
         setLoading(true);
 
+        const assistantPlaceholder: ChatMessage = { role: 'assistant', content: '' };
+        setMessages((prev) => [...prev, assistantPlaceholder]);
+
         try {
-            // Send history (skip the initial greeting)
             const history = updatedMessages
                 .slice(1)
                 .map((m) => ({ role: m.role, content: m.content }));
 
-            const result = await api.chatAI(userMessage.content, history);
-            setMessages((prev) => [
-                ...prev,
-                { role: 'assistant', content: result.reply },
-            ]);
-        } catch (err: any) {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    role: 'assistant',
-                    content: 'Извините, произошла ошибка. Попробуйте ещё раз позже.',
-                },
-            ]);
+            await api.chatAIStream(userMessage.content, history, 'ru', (delta) => {
+                setMessages((prev) => {
+                    const next = [...prev];
+                    const last = next[next.length - 1];
+                    if (last?.role === 'assistant') {
+                        next[next.length - 1] = { ...last, content: last.content + delta };
+                    }
+                    return next;
+                });
+            });
+        } catch {
+            setMessages((prev) => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                if (last?.role === 'assistant' && !last.content) {
+                    next[next.length - 1] = {
+                        role: 'assistant',
+                        content: 'Извините, произошла ошибка. Попробуйте ещё раз позже.',
+                    };
+                    return next;
+                }
+                return [
+                    ...prev,
+                    {
+                        role: 'assistant',
+                        content: 'Извините, произошла ошибка. Попробуйте ещё раз позже.',
+                    },
+                ];
+            });
         } finally {
             setLoading(false);
         }

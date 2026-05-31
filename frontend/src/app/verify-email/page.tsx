@@ -4,6 +4,8 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Sparkles, CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react';
+import AuthVisual from '@/app/components/AuthVisual';
+import { getApiBaseUrl } from '@/lib/oauth';
 
 type Status = 'loading' | 'success' | 'error';
 
@@ -24,7 +26,7 @@ function VerifyEmailContent() {
     const verify = async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/verify-email?token=${token}`
+          `${getApiBaseUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`
         );
         const data = await res.json();
         if (res.ok) {
@@ -118,17 +120,8 @@ export default function VerifyEmailPage() {
       </div>
 
       <div className="auth-split-right">
-        <div className="auth-globe-wrap">
-          <div className="auth-globe">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="auth-globe-ring" style={{ '--ring-i': i } as any} />
-            ))}
-            <div className="auth-globe-center">
-              <Sparkles className="w-8 h-8 text-white/80" />
-            </div>
-          </div>
-          <p className="auth-globe-label">AI-POWERED CMS PLATFORM</p>
-        </div>
+        <AuthVisual />
+        <p className="auth-globe-label">AI-POWERED CMS PLATFORM</p>
 
         <div className="auth-right-content">
           <h2 className="auth-right-heading">

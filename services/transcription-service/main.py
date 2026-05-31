@@ -24,6 +24,7 @@ from shared.config import settings
 from shared.database import get_session
 from shared.auth import get_current_user
 from shared.service_auth import add_service_auth_middleware
+from shared.observability import ServiceObservabilityMiddleware
 from shared.schemas.transcription import (
     TranscriptionCreate, TranscriptionResponse, TranscriptionList, 
     TranscriptionStats, TranscriptionSegment
@@ -59,6 +60,7 @@ app.add_middleware(
 )
 
 add_service_auth_middleware(app)
+app.add_middleware(ServiceObservabilityMiddleware, service_name="transcription-service")
 
 
 def get_transcription_service(session: AsyncSession = Depends(get_session)) -> TranscriptionService:

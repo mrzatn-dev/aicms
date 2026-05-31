@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, Eye, EyeOff, Sparkles, Zap, Shield, Globe, ArrowRight, CheckCircle2, MailCheck } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getOAuthStartUrl } from '@/lib/oauth';
+import AuthVisual from '@/app/components/AuthVisual';
 
 const FEATURES = [
   { icon: Zap,    label: 'AI-анализ документов и изображений' },
@@ -53,8 +54,8 @@ export default function RegisterPage() {
     }
   };
 
-  const handleOAuth = (provider: 'google') => {
-    window.location.href = getOAuthStartUrl(provider);
+  const handleOAuth = () => {
+    window.location.href = getOAuthStartUrl('google');
   };
 
   /* ── Email verification success screen ── */
@@ -219,7 +220,7 @@ export default function RegisterPage() {
               <button
                 id="oauth-google-register-btn"
                 type="button"
-                onClick={() => handleOAuth('google')}
+                onClick={handleOAuth}
                 className="auth-oauth-btn"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -259,17 +260,8 @@ export default function RegisterPage() {
 function RightPanel() {
   return (
     <>
-      <div className="auth-globe-wrap">
-        <div className="auth-globe">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="auth-globe-ring" style={{ '--ring-i': i } as any} />
-          ))}
-          <div className="auth-globe-center">
-            <Sparkles className="w-8 h-8 text-white/80" />
-          </div>
-        </div>
-        <p className="auth-globe-label">AI-POWERED CMS PLATFORM</p>
-      </div>
+      <AuthVisual />
+      <p className="auth-globe-label">AI-POWERED CMS PLATFORM</p>
 
       <div className="auth-right-content">
         <h2 className="auth-right-heading">

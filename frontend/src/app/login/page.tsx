@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Sparkles, Zap, Shield, Globe, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getOAuthStartUrl } from '@/lib/oauth';
+import AuthVisual from '@/app/components/AuthVisual';
 
 const FEATURES = [
   { icon: Zap, label: 'AI-анализ контента за секунды' },
@@ -38,8 +39,8 @@ export default function LoginPage() {
     }
   };
 
-  const handleOAuth = (provider: 'google') => {
-    window.location.href = getOAuthStartUrl(provider);
+  const handleOAuth = () => {
+    window.location.href = getOAuthStartUrl('google');
   };
 
   return (
@@ -134,7 +135,7 @@ export default function LoginPage() {
               <button
                 id="oauth-google-btn"
                 type="button"
-                onClick={() => handleOAuth('google')}
+                onClick={handleOAuth}
                 className="auth-oauth-btn"
               >
                 {/* Google SVG */}
@@ -165,18 +166,8 @@ export default function LoginPage() {
 
       {/* ─── RIGHT: Dark Panel ─── */}
       <div className="auth-split-right">
-        {/* Globe decoration */}
-        <div className="auth-globe-wrap">
-          <div className="auth-globe">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="auth-globe-ring" style={{ '--ring-i': i } as any} />
-            ))}
-            <div className="auth-globe-center">
-              <Sparkles className="w-8 h-8 text-white/80" />
-            </div>
-          </div>
-          <p className="auth-globe-label">AI-POWERED CMS PLATFORM</p>
-        </div>
+        <AuthVisual />
+        <p className="auth-globe-label">AI-POWERED CMS PLATFORM</p>
 
         <div className="auth-right-content">
           <h2 className="auth-right-heading">

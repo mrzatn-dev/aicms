@@ -27,6 +27,7 @@ from shared.schemas.article import (
 from shared.auth import get_current_user, require_admin
 from shared.broker import broker
 from shared.service_auth import add_service_auth_middleware
+from shared.observability import ServiceObservabilityMiddleware
 
 from service import ContentService
 from repository import ArticleRepository
@@ -63,6 +64,7 @@ app.add_middleware(
 )
 
 add_service_auth_middleware(app)
+app.add_middleware(ServiceObservabilityMiddleware, service_name="content-service")
 
 
 def get_content_service(

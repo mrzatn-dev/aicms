@@ -50,3 +50,28 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class RegisterPendingResponse(BaseModel):
+    """Registration pending email verification."""
+
+    requires_verification: bool = True
+    message: str
+    email: str
+
+
+class AdminBootstrapRequest(BaseModel):
+    """Bootstrap first admin without Render Shell."""
+
+    email: str = Field(min_length=5, max_length=255)
+    username: str | None = Field(default=None, min_length=3, max_length=100)
+    password: str | None = Field(default=None, min_length=6, max_length=128)
+    full_name: str | None = Field(default=None, max_length=255)
+
+
+class AdminBootstrapResponse(BaseModel):
+    action: str
+    email: str
+    username: str
+    role: str
+    message: str

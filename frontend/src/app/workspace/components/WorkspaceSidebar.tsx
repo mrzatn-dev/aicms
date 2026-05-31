@@ -37,13 +37,13 @@ export function WorkspaceSidebar({
 
     return (
         <aside
-            className={`fixed lg:sticky top-0 left-0 h-screen bg-white border-r border-surface-200/60 z-40 flex flex-col transition-all duration-300 ease-in-out ${
+            className={`workspace-sidebar fixed lg:sticky top-0 left-0 h-screen border-r z-40 flex flex-col transition-all duration-300 ease-in-out ${
                 sidebarOpen ? 'w-72' : 'w-20'
             } ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         >
             <div className="p-4 border-b border-surface-200/60 flex items-center justify-between">
                 <Link href="/" className={`flex items-center gap-2 ${!sidebarOpen && 'justify-center w-full'}`}>
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-violet-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-500/20">
                         <Sparkles className="w-5 h-5 text-white" />
                     </div>
                     {sidebarOpen && (
@@ -82,9 +82,9 @@ export function WorkspaceSidebar({
                         <button
                             key={item.id}
                             onClick={() => { onTabChange(item.id); onCloseMobileMenu(); }}
-                            className={`w-full relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                            className={`workspace-nav-btn w-full relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                                 isActive
-                                    ? 'bg-primary-50 text-primary-700 shadow-sm'
+                                    ? 'workspace-nav-btn--active'
                                     : 'text-surface-700/70 hover:bg-surface-100 hover:text-surface-900'
                             } ${!sidebarOpen && 'justify-center'}`}
                             title={!sidebarOpen ? item.label : undefined}
@@ -118,9 +118,9 @@ export function WorkspaceSidebar({
                         <button
                             key={item.id}
                             onClick={() => { onTabChange(item.id); onCloseMobileMenu(); }}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                            className={`workspace-nav-btn w-full relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                                 isActive
-                                    ? 'bg-primary-50 text-primary-700 shadow-sm'
+                                    ? 'workspace-nav-btn--active'
                                     : 'text-surface-700/70 hover:bg-surface-100 hover:text-surface-900'
                             } ${!sidebarOpen && 'justify-center'}`}
                             title={!sidebarOpen ? item.label : undefined}

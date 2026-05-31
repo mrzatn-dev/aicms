@@ -255,6 +255,16 @@ class AIAnalysisService:
         """Handle AI chat conversation."""
         return await self.nlp.chat(message=message, history=history, language=language)
 
+    async def chat_stream(
+        self,
+        message: str,
+        history: list[dict] | None = None,
+        language: str = "ru",
+    ):
+        """Stream AI chat tokens."""
+        async for chunk in self.nlp.chat_stream(message=message, history=history, language=language):
+            yield chunk
+
     async def validate_user_input(self, title: str, content: str, language: str = "ru") -> dict:
         """Perform AI smart validation."""
         return await self.nlp.validate_user_input(title, content, language=language)

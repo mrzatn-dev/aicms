@@ -22,6 +22,14 @@ export default function Navbar() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [langMenuOpen, setLangMenuOpen] = useState(false);
     const [locale, setLocale] = useState<LocaleCode>('ru');
+    const [scrolled, setScrolled] = useState(false);
+
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 12);
+        onScroll();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -54,10 +62,14 @@ export default function Navbar() {
     };
 
     return (
-        <nav className="fixed w-full top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-surface-200/60">
+        <nav
+            className={`fixed w-full top-0 z-50 backdrop-blur-xl border-b transition-all duration-300 ${
+                scrolled ? 'nav-scrolled' : 'bg-white/70 border-surface-200/50'
+            }`}
+        >
             <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-                <Link href="/" className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center">
+                <Link href="/" className="flex items-center gap-2 group">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-violet-500 flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform duration-300">
                         <Sparkles className="w-5 h-5 text-white" />
                     </div>
                     <span className="text-xl font-bold text-surface-900">AI<span className="text-primary-600">CMS</span></span>

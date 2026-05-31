@@ -3,6 +3,7 @@ User repository - async database operations.
 """
 
 import uuid
+from datetime import datetime
 from typing import Sequence
 
 from sqlalchemy import select, update, delete
@@ -24,6 +25,9 @@ class UserRepository:
         hashed_password: str,
         full_name: str | None = None,
         role: UserRole = UserRole.USER,
+        email_verified: bool = True,
+        verification_token: str | None = None,
+        verification_token_expires: datetime | None = None,
     ) -> User:
         """Create a new user."""
         user = User(
@@ -32,6 +36,9 @@ class UserRepository:
             hashed_password=hashed_password,
             full_name=full_name,
             role=role,
+            email_verified=email_verified,
+            verification_token=verification_token,
+            verification_token_expires=verification_token_expires,
         )
         self.session.add(user)
         await self.session.flush()
@@ -56,6 +63,13 @@ class UserRepository:
         """Get user by username."""
         result = await self.session.execute(
             select(User).where(User.username == username)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_verification_token(self, token: str) -> User | None:
+        """Find user by active verification token."""
+        result = await self.session.execute(
+            select(User).where(User.verification_token == token)
         )
         return result.scalar_one_or_none()
 

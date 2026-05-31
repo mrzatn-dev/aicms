@@ -21,13 +21,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
 from shared.database import get_session
-from shared.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse, UserUpdate
+from shared.schemas.user import (
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    TokenResponse,
+    UserUpdate,
+    RegisterPendingResponse,
+    AdminBootstrapRequest,
+    AdminBootstrapResponse,
+)
 from shared.auth import get_current_user, require_admin
 from shared.service_auth import add_service_auth_middleware
 from shared.cookie_auth import set_auth_cookie, clear_auth_cookie
 
 from service import AuthService
 from repository import UserRepository
+from shared.admin_bootstrap import bootstrap_admin_user
 import oauth as oauth_handlers
 
 logger = logging.getLogger(__name__)
@@ -74,13 +84,96 @@ async def health_check():
     return {"status": "healthy", "service": "auth-service"}
 
 
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root():
+    """Render and load balancers often probe / — keep it healthy."""
+    return {"status": "healthy", "service": "auth-service"}
+
+
+@app.get("/oauth-status")
+async def oauth_status(request: Request):
+    """Diagnose OAuth env vars (values are never exposed)."""
+    import oauth as oauth_handlers
+
+    return {
+        "google_client_id_set": bool(settings.GOOGLE_CLIENT_ID),
+        "google_client_secret_set": bool(settings.GOOGLE_CLIENT_SECRET),
+        "oauth_api_base_url": settings.OAUTH_API_BASE_URL,
+        "oauth_redirect_uri_configured": settings.OAUTH_REDIRECT_URI,
+        "oauth_redirect_uri_resolved": oauth_handlers.get_frontend_oauth_callback_url(request),
+        "public_api_base_resolved": oauth_handlers.get_public_api_base_url(request),
+        "forwarded_host": request.headers.get("x-forwarded-host"),
+        "forwarded_proto": request.headers.get("x-forwarded-proto"),
+    }
+
+
 @app.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """Register a new user."""
-    return _token_response(await auth_service.register(user_data))
+    result = await auth_service.register(user_data)
+    if isinstance(result, RegisterPendingResponse):
+        return JSONResponse(content=result.model_dump(mode="json"), status_code=201)
+    return _token_response(result)
+
+
+@app.get("/verify-email")
+async def verify_email(
+    token: str,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Confirm email address from verification link."""
+    return await auth_service.verify_email(token)
+
+
+@app.post("/bootstrap-admin", response_model=AdminBootstrapResponse)
+async def bootstrap_admin(
+    body: AdminBootstrapRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Create or promote admin without Render Shell.
+    Requires header X-Admin-Bootstrap-Secret matching ADMIN_BOOTSTRAP_SECRET.
+    """
+    configured = (settings.ADMIN_BOOTSTRAP_SECRET or "").strip()
+    if not configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="ADMIN_BOOTSTRAP_SECRET не задан на сервере",
+        )
+
+    provided = request.headers.get("X-Admin-Bootstrap-Secret", "")
+    if not provided or provided != configured:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Неверный X-Admin-Bootstrap-Secret",
+        )
+
+    try:
+        result = await bootstrap_admin_user(
+            session,
+            email=body.email,
+            username=body.username,
+            password=body.password,
+            full_name=body.full_name,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        await session.rollback()
+        logger.exception("Admin bootstrap failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось создать администратора",
+        ) from exc
+
+    return AdminBootstrapResponse(**result)
 
 
 @app.post("/login")
@@ -120,6 +213,25 @@ async def oauth_google_callback(
         code, state, error, auth_service, request
     )
 
+
+@app.get("/github")
+async def oauth_github_start(request: Request):
+    """Redirect to GitHub OAuth consent screen."""
+    return oauth_handlers.redirect_to_github(request)
+
+
+@app.get("/callback/github")
+async def oauth_github_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Handle GitHub OAuth callback."""
+    return await oauth_handlers.handle_github_callback(
+        code, state, error, auth_service, request
+    )
 
 
 @app.get("/me", response_model=UserResponse)

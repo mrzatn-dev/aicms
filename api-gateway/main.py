@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from shared.config import as_http_url, settings
+from shared.observability import ServiceObservabilityMiddleware
 
 from middleware import AuthMiddleware, RateLimitMiddleware
 from router import register_routes
@@ -33,6 +34,11 @@ logging.basicConfig(level=logging.INFO)
 async def lifespan(app: FastAPI):
     """Application lifespan: create HTTP client."""
     logger.info("API Gateway starting...")
+    logger.info(
+        "Google OAuth on gateway: client_id=%s, client_secret=%s",
+        "set" if settings.GOOGLE_CLIENT_ID else "MISSING",
+        "set" if settings.GOOGLE_CLIENT_SECRET else "MISSING",
+    )
     app.state.http_client = httpx.AsyncClient(timeout=30.0)
     yield
     await app.state.http_client.aclose()
@@ -59,6 +65,7 @@ app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
 
 # Require JWT for protected routes (added last = runs first in the stack)
 app.add_middleware(AuthMiddleware)
+app.add_middleware(ServiceObservabilityMiddleware, service_name="api-gateway")
 
 
 @app.middleware("http")

@@ -1,6 +1,7 @@
 # Render Blueprint for the full AI CMS environment.
 # Public API/OAuth callback:
-#   https://aicms-9kw6.onrender.com/api/auth/callback/google
+#   Google: https://aicms-frontend.onrender.com/api/auth/callback/google
+#   GitHub: https://aicms-frontend.onrender.com/api/auth/callback/github
 # Frontend:
 #   https://aicms-frontend.onrender.com
 
@@ -535,6 +536,20 @@ services:
         value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
       - key: OAUTH_API_BASE_URL
         value: https://aicms-frontend.onrender.com
+      - key: OAUTH_REDIRECT_URI
+        value: https://aicms-frontend.onrender.com/oauth/callback
+      - key: GOOGLE_CLIENT_ID
+        value: 651418924165-8m35kvr3dvgbevp7gudmc8ius6i3ve62.apps.googleusercontent.com
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: ADMIN_BOOTSTRAP_SECRET
+        generateValue: true
+      - key: EMAIL_VERIFICATION_ENABLED
+        value: "false"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: AI CMS <noreply@aicms.local>
       - key: DEBUG
         value: "false"
 

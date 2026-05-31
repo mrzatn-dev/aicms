@@ -48,7 +48,13 @@ async def run_async_migrations() -> None:
     """Run migrations in 'online' mode with an async engine."""
     from sqlalchemy.ext.asyncio import create_async_engine
 
-    connectable = create_async_engine(settings.database_url, poolclass=pool.NullPool)
+    from shared.database import asyncpg_connect_args
+
+    connectable = create_async_engine(
+        settings.database_url,
+        poolclass=pool.NullPool,
+        connect_args=asyncpg_connect_args(),
+    )
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

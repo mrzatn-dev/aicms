@@ -4,9 +4,11 @@ Uses pydantic-settings for env var support.
 """
 
 from pathlib import Path
+import os
+from urllib.parse import parse_qs, quote_plus, urlencode, urlparse, urlunparse
 
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
 
 ROOT_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
@@ -19,6 +21,51 @@ def as_http_url(value: str) -> str:
     return f"http://{normalized}"
 
 
+def normalize_render_database_url(url: str) -> str:
+    """
+    Render Internal Database URL uses host `dpg-xxx-a` (no domain).
+    External connections need `dpg-xxx-a.<region>-postgres.render.com`.
+    """
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    if not host.startswith("dpg-") or "." in host:
+        return url
+
+    region = os.environ.get("RENDER_PG_REGION", "oregon")
+    external_host = f"{host}.{region}-postgres.render.com"
+
+    auth = ""
+    if parsed.username:
+        user = quote_plus(parsed.username)
+        if parsed.password:
+            auth = f"{user}:{quote_plus(parsed.password)}@"
+        else:
+            auth = f"{user}@"
+
+    port = f":{parsed.port}" if parsed.port else ""
+    netloc = f"{auth}{external_host}{port}"
+    normalized = urlunparse(parsed._replace(netloc=netloc))
+
+    if "sslmode=" not in normalized:
+        separator = "&" if "?" in normalized else "?"
+        normalized = f"{normalized}{separator}sslmode=require"
+
+    return normalized
+
+
+def strip_sslmode_query(url: str) -> str:
+    """Remove sslmode from URL — asyncpg expects SSL via connect_args."""
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    params.pop("sslmode", None)
+    if not params:
+        return urlunparse(parsed._replace(query=""))
+    flat = [(key, values[-1]) for key, values in params.items() if values]
+    return urlunparse(parsed._replace(query=urlencode(flat)))
+
+
 class DatabaseSettings(BaseSettings):
     """Database connection settings."""
 
@@ -29,16 +76,24 @@ class DatabaseSettings(BaseSettings):
     DB_PASSWORD: str = Field(default="postgres", description="PostgreSQL password")
     DB_NAME: str = Field(default="cms_db", description="PostgreSQL database name")
 
+    def _normalized_database_url(self) -> str | None:
+        if not self.DATABASE_URL:
+            return None
+        return normalize_render_database_url(self.DATABASE_URL.strip())
+
     @property
     def database_url(self) -> str:
-        if self.DATABASE_URL:
-            if self.DATABASE_URL.startswith("postgresql+asyncpg://"):
-                return self.DATABASE_URL
-            if self.DATABASE_URL.startswith("postgresql://"):
-                return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-            if self.DATABASE_URL.startswith("postgres://"):
-                return self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-            return self.DATABASE_URL
+        raw = self._normalized_database_url()
+        if raw:
+            if raw.startswith("postgresql+asyncpg://"):
+                url = raw
+            elif raw.startswith("postgresql://"):
+                url = raw.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif raw.startswith("postgres://"):
+                url = raw.replace("postgres://", "postgresql+asyncpg://", 1)
+            else:
+                url = raw
+            return strip_sslmode_query(url)
         return (
             f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -46,12 +101,13 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def database_url_sync(self) -> str:
-        if self.DATABASE_URL:
-            if self.DATABASE_URL.startswith("postgresql+asyncpg://"):
-                return self.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
-            if self.DATABASE_URL.startswith("postgres://"):
-                return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
-            return self.DATABASE_URL
+        raw = self._normalized_database_url()
+        if raw:
+            if raw.startswith("postgresql+asyncpg://"):
+                return raw.replace("postgresql+asyncpg://", "postgresql://", 1)
+            if raw.startswith("postgres://"):
+                return raw.replace("postgres://", "postgresql://", 1)
+            return raw
         return (
             f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -182,6 +238,10 @@ class OAuthSettings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str | None = Field(
         default=None, description="Google OAuth client secret"
     )
+    GITHUB_CLIENT_ID: str | None = Field(default=None, description="GitHub OAuth client ID")
+    GITHUB_CLIENT_SECRET: str | None = Field(
+        default=None, description="GitHub OAuth client secret"
+    )
     OAUTH_REDIRECT_URI: str = Field(
         default="http://localhost:3000/oauth/callback",
         description="Frontend URL receiving JWT after OAuth",
@@ -190,6 +250,19 @@ class OAuthSettings(BaseSettings):
         default="http://localhost:3000",
         description="Public URL for OAuth provider callbacks (frontend origin with /api proxy)",
     )
+
+    @field_validator(
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        mode="before",
+    )
+    @classmethod
+    def empty_oauth_secret_to_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     model_config = {"env_file": str(ROOT_ENV_FILE), "extra": "ignore"}
 
@@ -209,9 +282,22 @@ class AppSettings(
     APP_VERSION: str = Field(default="1.0.0", description="Application version")
     DEBUG: bool = Field(default=False, description="Debug mode")
     DEEPSEEK_API_KEY: str | None = Field(default=None, description="DeepSeek API Key")
+    EMAIL_VERIFICATION_ENABLED: bool = Field(
+        default=False,
+        description="Require email verification before login",
+    )
+    RESEND_API_KEY: str | None = Field(default=None, description="Resend.com API key for emails")
+    EMAIL_FROM: str = Field(
+        default="AI CMS <onboarding@resend.dev>",
+        description="From address for transactional email",
+    )
     INTERNAL_SERVICE_TOKEN: str | None = Field(
         default=None,
         description="Shared secret for gateway/service-to-service HTTP calls",
+    )
+    ADMIN_BOOTSTRAP_SECRET: str | None = Field(
+        default=None,
+        description="One-time secret for POST /api/auth/bootstrap-admin (no Shell needed)",
     )
     API_GATEWAY_URL: str = Field(default="http://api-gateway:8000", description="Internal API Gateway URL")
     AUTH_SERVICE_URL: str = Field(default="http://auth-service:8001", description="Internal auth service URL")

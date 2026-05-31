@@ -29,6 +29,8 @@ async def publish_analytics_event(
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     try:
+        if broker.connection is None or broker.connection.is_closed:
+            await broker.connect()
         await broker.publish(ANALYTICS_QUEUE, payload)
     except Exception as exc:
         logger.warning("Failed to publish analytics event '%s': %s", event_type, exc)

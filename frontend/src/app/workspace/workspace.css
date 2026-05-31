@@ -1,0 +1,190 @@
+/* Workspace shell & navigation polish */
+
+.workspace-shell {
+  position: relative;
+  background:
+    radial-gradient(ellipse 80% 50% at 100% 0%, rgba(16, 185, 129, 0.06), transparent),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(139, 92, 246, 0.05), transparent),
+    rgb(248 250 252);
+}
+
+html.dark .workspace-shell {
+  background:
+    radial-gradient(ellipse 80% 50% at 100% 0%, rgba(16, 185, 129, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(139, 92, 246, 0.06), transparent),
+    rgb(2 6 23);
+}
+
+.workspace-sidebar {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  border-color: rgba(226, 232, 240, 0.7);
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.04);
+}
+
+html.dark .workspace-sidebar {
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(51, 65, 85, 0.6);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+}
+
+.workspace-nav-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.workspace-nav-btn--active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.1));
+  color: rgb(21 128 61);
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.12);
+}
+
+html.dark .workspace-nav-btn--active {
+  color: rgb(110 231 183);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(99, 102, 241, 0.12));
+}
+
+.workspace-nav-btn--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(to bottom, #10b981, #8b5cf6);
+}
+
+.workspace-topbar {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+html.dark .workspace-topbar {
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.workspace-topbar-title {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.workspace-tab-panel {
+  animation: workspace-tab-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes workspace-tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.workspace-welcome-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.95) 0%, rgba(237, 233, 254, 0.9) 100%);
+}
+
+html.dark .workspace-welcome-card {
+  border-color: rgba(52, 211, 153, 0.2);
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.35) 0%, rgba(76, 29, 149, 0.25) 100%);
+}
+
+.workspace-welcome-card__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  pointer-events: none;
+  animation: float-gentle 6s ease-in-out infinite;
+}
+
+.workspace-welcome-card__orb--1 {
+  width: 200px;
+  height: 200px;
+  top: -80px;
+  right: -40px;
+  background: rgba(139, 92, 246, 0.25);
+}
+
+.workspace-welcome-card__orb--2 {
+  width: 160px;
+  height: 160px;
+  bottom: -60px;
+  left: -30px;
+  background: rgba(16, 185, 129, 0.2);
+  animation-delay: 1.5s;
+}
+
+.workspace-stat-card {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+}
+
+.workspace-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+html.dark .workspace-stat-card:hover {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.workspace-quick-action {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, border-color 0.25s ease;
+}
+
+.workspace-quick-action:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.1);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.workspace-loader {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: 3px solid rgba(16, 185, 129, 0.2);
+  border-top-color: #10b981;
+  border-right-color: #8b5cf6;
+  animation: auth-spin 0.85s linear infinite;
+}
+
+.workspace-loader-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.08), transparent 50%),
+    rgb(248 250 252);
+}
+
+html.dark .workspace-loader-wrap {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.1), transparent 50%),
+    rgb(2 6 23);
+}
+
+.workspace-loader-text {
+  font-size: 0.875rem;
+  color: #64748b;
+  animation: fade-in 0.5s ease;
+}
+
+html.dark .workspace-loader-text {
+  color: #94a3b8;
+}
+
+.workspace-mobile-overlay {
+  backdrop-filter: blur(4px);
+  animation: fade-in 0.25s ease;
+}

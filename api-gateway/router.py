@@ -4,8 +4,11 @@ API Gateway router - proxies requests to backend services.
 
 import logging
 
+from typing import AsyncIterator
+
 import httpx
 from fastapi import FastAPI, Request, Response, HTTPException
+from starlette.responses import StreamingResponse
 
 from shared.config import as_http_url, settings
 from shared.service_auth import internal_service_headers
@@ -77,6 +80,70 @@ async def proxy_request(
         raise HTTPException(status_code=502, detail="Bad gateway")
 
 
+async def proxy_stream_request(
+    request: Request,
+    service_url: str,
+    path: str,
+) -> StreamingResponse:
+    """Forward streaming (SSE) request to a backend service without buffering."""
+    client: httpx.AsyncClient = request.app.state.http_client
+
+    url = f"{service_url}{path}"
+    if request.query_params:
+        url += f"?{request.query_params}"
+
+    headers = dict(request.headers)
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    forwarded_proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    if forwarded_host:
+        headers["x-forwarded-host"] = forwarded_host
+        headers["x-forwarded-proto"] = forwarded_proto
+    headers.pop("host", None)
+
+    internal_headers = internal_service_headers()
+    if internal_headers:
+        headers.update(internal_headers)
+
+    body = await request.body()
+
+    try:
+        req = client.build_request(
+            method=request.method,
+            url=url,
+            headers=headers,
+            content=body if body else None,
+            timeout=120.0,
+        )
+        response = await client.send(req, stream=True)
+
+        async def stream_body() -> AsyncIterator[bytes]:
+            try:
+                async for chunk in response.aiter_bytes():
+                    yield chunk
+            finally:
+                await response.aclose()
+
+        response_headers = {
+            k: v
+            for k, v in response.headers.items()
+            if k.lower() not in {"content-encoding", "content-length", "transfer-encoding", "connection"}
+        }
+
+        return StreamingResponse(
+            stream_body(),
+            status_code=response.status_code,
+            headers=response_headers,
+            media_type=response.headers.get("content-type", "text/event-stream"),
+        )
+    except httpx.ConnectError:
+        raise HTTPException(status_code=503, detail="Service unavailable")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Service timeout")
+    except Exception as e:
+        logger.error("Stream proxy error: %s", e)
+        raise HTTPException(status_code=502, detail="Bad gateway")
+
+
 def register_routes(app: FastAPI) -> None:
     """Register all proxy routes for downstream services."""
 
@@ -107,6 +174,10 @@ def register_routes(app: FastAPI) -> None:
         return await proxy_request(request, SERVICE_MAP["validation"], f"/{path}")
 
     # ─── AI Service routes ───────────────────────────────────────────
+    @app.api_route("/api/ai/chat/stream", methods=["POST"])
+    async def ai_chat_stream_proxy(request: Request):
+        return await proxy_stream_request(request, SERVICE_MAP["ai"], "/chat/stream")
+
     @app.api_route("/api/ai/chat", methods=["POST"])
     async def ai_chat_proxy(request: Request):
         return await proxy_request(request, SERVICE_MAP["ai"], "/chat")

@@ -24,6 +24,7 @@ from shared.schemas.validation import ValidationRequest, ValidationResponse, Val
 from shared.broker import broker, VALIDATION_QUEUE, AI_ANALYSIS_QUEUE
 from shared.auth import require_admin, get_current_user
 from shared.service_auth import add_service_auth_middleware
+from shared.observability import ServiceObservabilityMiddleware
 
 from service import ValidationService
 
@@ -96,6 +97,7 @@ app.add_middleware(
 )
 
 add_service_auth_middleware(app)
+app.add_middleware(ServiceObservabilityMiddleware, service_name="validation-service")
 
 
 def get_validation_service(

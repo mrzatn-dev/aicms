@@ -43,13 +43,16 @@ module.exports = {
                 },
             },
             fontFamily: {
-                sans: ['Inter', 'system-ui', 'sans-serif'],
+                sans: ['DM Sans', 'system-ui', 'sans-serif'],
+                display: ['Instrument Serif', 'Georgia', 'serif'],
             },
             animation: {
                 'fade-in': 'fadeIn 0.5s ease-out',
                 'slide-up': 'slideUp 0.5s ease-out',
                 'slide-in-right': 'slideInRight 0.3s ease-out',
                 'pulse-slow': 'pulse 3s ease-in-out infinite',
+                'float': 'floatGentle 5s ease-in-out infinite',
+                'gradient': 'gradientShift 6s ease infinite',
             },
             keyframes: {
                 fadeIn: {
@@ -63,6 +66,14 @@ module.exports = {
                 slideInRight: {
                     '0%': { opacity: '0', transform: 'translateX(20px)' },
                     '100%': { opacity: '1', transform: 'translateX(0)' },
+                },
+                floatGentle: {
+                    '0%, 100%': { transform: 'translateY(0)' },
+                    '50%': { transform: 'translateY(-10px)' },
+                },
+                gradientShift: {
+                    '0%, 100%': { backgroundPosition: '0% center' },
+                    '50%': { backgroundPosition: '100% center' },
                 },
             },
         },

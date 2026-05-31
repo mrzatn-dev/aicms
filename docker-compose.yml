@@ -298,7 +298,9 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-change-me-internal-token}
       OAUTH_API_BASE_URL: ${OAUTH_API_BASE_URL:-http://localhost:3000}
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-change-me-internal-token}
+      OAUTH_REDIRECT_URI: ${OAUTH_REDIRECT_URI:-http://localhost:3000/oauth/callback}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       DEBUG: ${DEBUG:-true}
     ports:
       - "8000:8000"
