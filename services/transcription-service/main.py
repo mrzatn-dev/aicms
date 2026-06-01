@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from shared.config import settings
 from shared.database import get_session
 from shared.auth import get_current_user
+from shared.subscription_deps import require_ai_quota
 from shared.service_auth import add_service_auth_middleware
 from shared.observability import ServiceObservabilityMiddleware
 from shared.schemas.transcription import (
@@ -78,7 +79,7 @@ async def health_check():
 async def create_transcription(
     file: UploadFile = File(...),
     response_language: str = Form("ru"),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_ai_quota),
     service: TranscriptionService = Depends(get_transcription_service),
 ):
     """Upload and transcribe audio/video file."""

@@ -18,6 +18,7 @@ export type ActiveTab =
     | 'profile'
     | 'history'
     | 'settings'
+    | 'subscription'
     | 'statistics'
     | 'admin_control'
     | 'system_monitor'

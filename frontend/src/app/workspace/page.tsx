@@ -33,7 +33,10 @@ import { HomeTab } from './components/tabs/HomeTab';
 import { ImageTab } from './components/tabs/ImageTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { SettingsTab } from './components/tabs/SettingsTab';
+import { SubscriptionTab } from './components/tabs/SubscriptionTab';
+import type { SubscriptionData, SubscriptionPlan } from './components/tabs/SubscriptionTab';
 import { StatisticsTab } from './components/tabs/StatisticsTab';
+import { getSubscriptionCopy } from './subscription-i18n';
 import { SupportCenterTab } from './components/tabs/SupportCenterTab';
 import { SystemMonitorTab } from './components/tabs/SystemMonitorTab';
 import { ValidateTab } from './components/tabs/ValidateTab';
@@ -135,6 +138,12 @@ export default function UnifiedDashboardPage() {
     const [settingsLoading, setSettingsLoading] = useState(false);
     const [settingsForm, setSettingsForm] = useState<SettingsFormState>(initialSettingsForm);
     const [savingSettings, setSavingSettings] = useState(false);
+
+    const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+    const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+    const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+    const [subscriptionPaymentNote, setSubscriptionPaymentNote] = useState('');
+    const [changingPlanId, setChangingPlanId] = useState<string | null>(null);
 
     const [statistics, setStatistics] = useState<StatisticsData | null>(null);
     const [statsLoading, setStatsLoading] = useState(false);
@@ -277,6 +286,12 @@ export default function UnifiedDashboardPage() {
     }, [activeTab, user?.role, adminUserSearch, adminFileSearch, adminUserRoleFilter, adminFileToolFilter]);
 
     useEffect(() => {
+        if (activeTab === 'subscription' && user) {
+            void loadSubscription();
+        }
+    }, [activeTab, user, locale]);
+
+    useEffect(() => {
         if (typeof document === 'undefined') return;
         document.documentElement.classList.toggle('dark', settingsForm.theme === 'dark');
     }, [settingsForm.theme]);
@@ -338,6 +353,45 @@ export default function UnifiedDashboardPage() {
             console.error('Failed to load history:', error);
         } finally {
             setHistoryLoading(false);
+        }
+    };
+
+    const loadSubscription = async () => {
+        setSubscriptionLoading(true);
+        try {
+            const [plansRes, subRes] = await Promise.all([
+                api.getSubscriptionPlans(locale),
+                api.getMySubscription(locale),
+            ]);
+            setSubscriptionPlans(plansRes.plans || []);
+            setSubscriptionPaymentNote(plansRes.payment_note || '');
+            setSubscription({
+                plan_id: subRes.plan_id,
+                plan_name: subRes.plan_name,
+                price_label: subRes.price_label,
+                billing_period: subRes.billing_period,
+                current_period_start: subRes.current_period_start,
+                current_period_end: subRes.current_period_end,
+                usage: subRes.usage,
+            });
+        } catch (error) {
+            console.error('Failed to load subscription:', error);
+        } finally {
+            setSubscriptionLoading(false);
+        }
+    };
+
+    const handleChangePlan = async (planId: string) => {
+        const subCopy = getSubscriptionCopy(locale);
+        setChangingPlanId(planId);
+        try {
+            const result = await api.changeSubscription(planId, locale);
+            await loadSubscription();
+            showToast(result.message || subCopy.success, 'success');
+        } catch {
+            showToast(subCopy.error, 'error');
+        } finally {
+            setChangingPlanId(null);
         }
     };
 
@@ -1217,6 +1271,18 @@ export default function UnifiedDashboardPage() {
                             savingSettings={savingSettings}
                             onSettingsChange={(updater) => setSettingsForm((prev) => updater(prev))}
                             onSave={handleSaveSettings}
+                        />
+                    )}
+
+                    {activeTab === 'subscription' && (
+                        <SubscriptionTab
+                            locale={locale}
+                            loading={subscriptionLoading}
+                            plans={subscriptionPlans}
+                            subscription={subscription}
+                            paymentNote={subscriptionPaymentNote}
+                            changingPlanId={changingPlanId}
+                            onSelectPlan={(planId) => void handleChangePlan(planId)}
                         />
                     )}
 

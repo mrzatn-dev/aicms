@@ -11,6 +11,7 @@ import Navbar from '@/app/components/Navbar';
 import WelcomeSplash from '@/app/components/WelcomeSplash';
 import HeroVisual from '@/app/components/HeroVisual';
 import ScrollReveal from '@/app/components/ScrollReveal';
+import PricingSection from '@/app/components/PricingSection';
 import { getHomePageCopy, LOCALES } from '@/app/i18n';
 import type { LocaleCode } from '@/app/i18n';
 
@@ -258,6 +259,8 @@ export default function HomePage() {
                 </div>
             </section>
 
+            <PricingSection locale={locale} />
+
             {/* How It Works */}
             <section className="py-20 px-6 bg-surface-100/80">
                 <div className="max-w-5xl mx-auto">
@@ -340,6 +343,9 @@ export default function HomePage() {
                         <div className="flex gap-6 flex-wrap justify-center">
                             <Link href="/articles" className="text-sm text-surface-700/60 hover:text-emerald-600 transition-colors">
                                 {copy.readBlog}
+                            </Link>
+                            <Link href="#pricing" className="text-sm text-surface-700/60 hover:text-emerald-600 transition-colors">
+                                {locale === 'en' ? 'Pricing' : locale === 'kk' ? 'Тарифтер' : 'Тарифы'}
                             </Link>
                             <Link href="/workspace" className="text-sm text-surface-700/60 hover:text-emerald-600 transition-colors">
                                 Workspace

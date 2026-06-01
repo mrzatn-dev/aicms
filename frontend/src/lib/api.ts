@@ -456,6 +456,50 @@ class ApiClient {
         return this.request<any>('/api/user/statistics');
     }
 
+    // ─── Subscription (KZT) ─────────────────────────────────────────
+    async getSubscriptionPlans(locale = 'ru') {
+        return this.requestPublic<{
+            plans: Array<{
+                id: string;
+                name: string;
+                price_kzt: number;
+                price_label: string;
+                billing_period: string;
+                features: string[];
+                highlighted?: boolean;
+            }>;
+            currency: string;
+            payment_note: string;
+        }>(`/api/user/subscription/plans?locale=${locale}`);
+    }
+
+    async getMySubscription(locale = 'ru') {
+        return this.request<{
+            plan_id: string;
+            plan_name: string;
+            price_label: string;
+            billing_period: string;
+            current_period_start: string;
+            current_period_end: string;
+            usage: {
+                ai_requests_used: number;
+                ai_requests_limit: number;
+                audio_minutes_used: number;
+                audio_minutes_limit: number;
+            };
+        }>(`/api/user/subscription/me?locale=${locale}`);
+    }
+
+    async changeSubscription(planId: string, locale = 'ru') {
+        return this.request<{ subscription: Record<string, unknown>; message: string }>(
+            `/api/user/subscription/change?locale=${locale}`,
+            {
+                method: 'POST',
+                body: { plan_id: planId },
+            },
+        );
+    }
+
     // ─── Analytics API ─────────────────────────────────────────────
     async getAnalyticsLogs(limit = 20, serviceName?: string, level?: string) {
         const params = new URLSearchParams({

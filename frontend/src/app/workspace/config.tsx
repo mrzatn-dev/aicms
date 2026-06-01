@@ -15,10 +15,12 @@ import {
     Settings as SettingsIcon,
     ShieldCheck,
     User,
+    CreditCard,
 } from 'lucide-react';
 
 import { getArticlesCopy } from './articles-i18n';
 import { getWorkspaceCopy } from './i18n';
+import { getSubscriptionCopy } from './subscription-i18n';
 import type { LocaleCode, QuickAction, SidebarItem } from './types';
 
 export const getSidebarItems = (locale: LocaleCode): SidebarItem[] => {
@@ -29,6 +31,7 @@ export const getSidebarItems = (locale: LocaleCode): SidebarItem[] => {
         { id: 'profile', label: copy.sidebar.profile, icon: User, gradient: 'from-emerald-500 to-teal-500', category: 'main' },
         { id: 'history', label: copy.sidebar.history, icon: History, gradient: 'from-amber-500 to-yellow-500', category: 'main' },
         { id: 'settings', label: copy.sidebar.settings, icon: SettingsIcon, gradient: 'from-slate-500 to-gray-500', category: 'main' },
+        { id: 'subscription', label: getSubscriptionCopy(locale).sidebar, icon: CreditCard, gradient: 'from-emerald-600 to-teal-600', category: 'main' },
         { id: 'statistics', label: copy.sidebar.statistics, icon: PieChart, gradient: 'from-rose-500 to-pink-500', category: 'main' },
         { id: 'admin_control', label: copy.sidebar.admin_control, icon: ShieldCheck, gradient: 'from-red-500 to-orange-500', category: 'main' },
         { id: 'system_monitor', label: copy.sidebar.system_monitor, icon: Server, gradient: 'from-slate-700 to-slate-500', category: 'main' },

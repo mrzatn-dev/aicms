@@ -14,6 +14,7 @@ from shared.models.support_conversation import (
     SupportMessage,
     SupportMessageSender,
 )
+from shared.models.user_subscription import UserSubscription, SubscriptionStatus
 
 __all__ = [
     "User",
@@ -34,4 +35,6 @@ __all__ = [
     "SupportConversationStatus",
     "SupportMessage",
     "SupportMessageSender",
+    "UserSubscription",
+    "SubscriptionStatus",
 ]

@@ -23,6 +23,7 @@ from shared.database import get_session, async_session_factory
 from shared.schemas.validation import ValidationRequest, ValidationResponse, ValidationRule
 from shared.broker import broker, VALIDATION_QUEUE, AI_ANALYSIS_QUEUE
 from shared.auth import require_admin, get_current_user
+from shared.subscription_deps import require_ai_quota
 from shared.service_auth import add_service_auth_middleware
 from shared.observability import ServiceObservabilityMiddleware
 
@@ -114,7 +115,7 @@ async def health_check():
 @app.post("/validate", response_model=ValidationResponse)
 async def validate_content(
     request: ValidationRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_ai_quota),
     service: ValidationService = Depends(get_validation_service),
 ):
     """Validate content via REST endpoint."""

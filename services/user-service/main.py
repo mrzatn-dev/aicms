@@ -33,6 +33,17 @@ from shared.schemas.support import (
     SupportConversationStatusUpdate,
     SupportMessageCreate,
 )
+from shared.schemas.subscription import (
+    ChangeSubscriptionRequest,
+    ChangeSubscriptionResponse,
+    SubscriptionPlansListResponse,
+    UserSubscriptionResponse,
+)
+from shared.subscription_service import (
+    build_user_subscription_response,
+    change_plan,
+    list_plans_response,
+)
 
 from service import UserService
 from repository import AdminUserRepository, UserHistoryRepository, UserSettingsRepository, SupportRepository
@@ -165,6 +176,39 @@ async def get_statistics(
 ):
     """Get user statistics."""
     return await user_service.get_statistics(current_user["user_id"])
+
+
+# ── Subscription Endpoints ──────────────────────────────────────
+
+@app.get("/subscription/plans", response_model=SubscriptionPlansListResponse)
+async def get_subscription_plans(
+    locale: str = Query("ru", pattern="^(ru|en|kk)$"),
+):
+    """Public tariff catalog (prices in KZT)."""
+    return await list_plans_response(locale)
+
+
+@app.get("/subscription/me", response_model=UserSubscriptionResponse)
+async def get_my_subscription(
+    locale: str = Query("ru", pattern="^(ru|en|kk)$"),
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Current user subscription and monthly usage."""
+    return await build_user_subscription_response(
+        session, current_user["user_id"], locale
+    )
+
+
+@app.post("/subscription/change", response_model=ChangeSubscriptionResponse)
+async def change_my_subscription(
+    body: ChangeSubscriptionRequest,
+    locale: str = Query("ru", pattern="^(ru|en|kk)$"),
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Activate or change plan (demo billing — no real payment)."""
+    return await change_plan(session, current_user["user_id"], body.plan_id, locale)
 
 
 # ── Admin Control Endpoints ──────────────────────────────────────

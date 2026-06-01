@@ -35,6 +35,7 @@ from shared.schemas.ai_analysis import (
 )
 from shared.broker import broker, AI_ANALYSIS_QUEUE
 from shared.auth import require_admin, get_current_user, require_user_or_internal
+from shared.subscription_deps import require_ai_quota, require_ai_quota_or_internal
 from shared.service_auth import add_service_auth_middleware
 from shared.observability import ServiceObservabilityMiddleware
 
@@ -142,7 +143,7 @@ async def list_analyses(
 @app.post("/generate/draft", response_model=AIDraftResponse)
 async def generate_draft(
     request: AIDraftRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_ai_quota),
     service: AIAnalysisService = Depends(get_ai_service),
 ):
     """Generate article draft via DeepSeek."""
@@ -152,7 +153,7 @@ async def generate_draft(
 @app.post("/generate/seo", response_model=AISEOResponse)
 async def generate_seo(
     request: AISEORequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_ai_quota),
     service: AIAnalysisService = Depends(get_ai_service),
 ):
     """Generate SEO metadata via DeepSeek."""
@@ -162,7 +163,7 @@ async def generate_seo(
 @app.post("/chat", response_model=AIChatResponse)
 async def ai_chat(
     request: AIChatRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_ai_quota),
     service: AIAnalysisService = Depends(get_ai_service),
 ):
     """AI chat assistant for CMS help."""
@@ -173,7 +174,7 @@ async def ai_chat(
 @app.post("/chat/stream")
 async def ai_chat_stream(
     request: AIChatRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_ai_quota),
     service: AIAnalysisService = Depends(get_ai_service),
 ):
     """Stream AI chat assistant response via Server-Sent Events."""
@@ -198,7 +199,7 @@ async def ai_chat_stream(
 @app.post("/validate-content", response_model=AIValidationResponse)
 async def ai_validate_content(
     request: AIValidationRequest,
-    current_user: dict = Depends(require_user_or_internal),
+    current_user: dict = Depends(require_ai_quota_or_internal),
     service: AIAnalysisService = Depends(get_ai_service),
 ):
     """AI smart validation for Article content."""
@@ -213,7 +214,7 @@ async def ai_validate_content(
 async def analyze_csv(
     request: Request,
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_ai_quota),
     service: AIAnalysisService = Depends(get_ai_service),
 ):
     """Analyze an uploaded CSV file using AI."""
@@ -247,7 +248,7 @@ async def analyze_csv(
 async def analyze_image(
     request: Request,
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_ai_quota),
     service: AIAnalysisService = Depends(get_ai_service),
 ):
     """Analyze an uploaded image using Pillow + AI."""
@@ -283,7 +284,7 @@ async def analyze_image(
 async def analyze_document(
     request: Request,
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_ai_quota),
     service: AIAnalysisService = Depends(get_ai_service),
 ):
     """Analyze an uploaded document (PDF, TXT, DOCX) using AI."""

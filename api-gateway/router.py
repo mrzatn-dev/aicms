@@ -212,6 +212,18 @@ def register_routes(app: FastAPI) -> None:
     async def user_statistics_proxy(request: Request):
         return await proxy_request(request, SERVICE_MAP["user"], "/statistics")
 
+    @app.api_route("/api/user/subscription/plans", methods=["GET"])
+    async def subscription_plans_proxy(request: Request):
+        return await proxy_request(request, SERVICE_MAP["user"], "/subscription/plans")
+
+    @app.api_route("/api/user/subscription/me", methods=["GET"])
+    async def subscription_me_proxy(request: Request):
+        return await proxy_request(request, SERVICE_MAP["user"], "/subscription/me")
+
+    @app.api_route("/api/user/subscription/change", methods=["POST"])
+    async def subscription_change_proxy(request: Request):
+        return await proxy_request(request, SERVICE_MAP["user"], "/subscription/change")
+
     @app.api_route("/api/user/support/conversations", methods=["GET", "POST"])
     async def user_support_conversations_proxy(request: Request):
         return await proxy_request(request, SERVICE_MAP["user"], "/support/conversations")
