@@ -317,6 +317,44 @@ class ApiClient {
         return fullReply;
     }
 
+    async generateDraft(data: { topic: string; tone?: string }) {
+        // Proxied to ai-service POST /generate/draft via API Gateway
+        return this.request<{ title: string; content: string }>('/api/ai/generate/draft', {
+            method: 'POST',
+            body: data,
+        });
+    }
+
+    async generateSEO(content: string) {
+        // Proxied to ai-service POST /generate/seo via API Gateway
+        return this.request<{ title: string; meta_description: string; keywords: string[] }>(
+            '/api/ai/generate/seo',
+            {
+                method: 'POST',
+                body: { content },
+            },
+        );
+    }
+
+    async improveText(data: { text: string; mode?: string; language?: string }) {
+        // Proxied to ai-service POST /assist/improve via API Gateway
+        return this.request<{ improved_text: string; changes: string[] }>('/api/ai/assist/improve', {
+            method: 'POST',
+            body: data,
+        });
+    }
+
+    async suggestTitles(data: { content: string; count?: number; language?: string }) {
+        // Proxied to ai-service POST /assist/titles via API Gateway
+        return this.request<{ suggestions: Array<{ title: string; meta_description: string }> }>(
+            '/api/ai/assist/titles',
+            {
+                method: 'POST',
+                body: data,
+            },
+        );
+    }
+
     async validateContent(data: { title: string; content: string; language?: string }) {
         // Quick AI moderation check (profanity / threats / self-harm etc.)
         // Proxied to ai-service POST /validate-content via API Gateway
@@ -357,6 +395,30 @@ class ApiClient {
             method: 'POST',
             body: formData,
         });
+    }
+
+    // ─── Unified AI Pipeline API ─────────────────────────────────
+    async startPipeline(file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Proxy to content-service POST /content/pipeline via API Gateway
+        return this.request<any>('/api/content/pipeline', {
+            method: 'POST',
+            body: formData,
+        });
+    }
+
+    async getPipelines(page = 1, pageSize = 20) {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            page_size: pageSize.toString(),
+        });
+        return this.request<any>(`/api/content/pipeline?${params}`);
+    }
+
+    async getPipeline(id: string) {
+        return this.request<any>(`/api/content/pipeline/${id}`);
     }
 
     // ─── Transcription API ───────────────────────────────────────

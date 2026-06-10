@@ -15,6 +15,7 @@ from shared.models.support_conversation import (
     SupportMessageSender,
 )
 from shared.models.user_subscription import UserSubscription, SubscriptionStatus
+from shared.models.pipeline_run import PipelineRun, PipelineSourceType, PipelineStatus
 
 __all__ = [
     "User",
@@ -37,4 +38,7 @@ __all__ = [
     "SupportMessageSender",
     "UserSubscription",
     "SubscriptionStatus",
+    "PipelineRun",
+    "PipelineSourceType",
+    "PipelineStatus",
 ]

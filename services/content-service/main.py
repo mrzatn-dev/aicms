@@ -12,12 +12,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from contextlib import asynccontextmanager
 from uuid import UUID
 
-from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Query, Request, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
-from shared.database import get_session
+from shared.database import get_session, async_session_factory
 from shared.schemas.article import (
     ArticleCreate,
     ArticleUpdate,
@@ -25,14 +25,41 @@ from shared.schemas.article import (
     ArticleListResponse,
 )
 from shared.auth import get_current_user, get_optional_user, require_admin
-from shared.broker import broker
+from shared.broker import broker, PIPELINE_COMPOSE_QUEUE
+from shared.pipeline import update_pipeline_stage
 from shared.service_auth import add_service_auth_middleware
 from shared.observability import ServiceObservabilityMiddleware
 
 from service import ContentService
 from repository import ArticleRepository
+from pipeline_service import PipelineService, handle_compose_message
 
 logger = logging.getLogger(__name__)
+
+
+async def handle_compose_queue_message(message: dict) -> None:
+    """RabbitMQ consumer: compose article from pipeline results."""
+    async with async_session_factory() as session:
+        try:
+            await handle_compose_message(message, session)
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            logger.error("Compose pipeline error: %s", e)
+            pipeline_id = message.get("pipeline_id")
+            if pipeline_id:
+                async with async_session_factory() as err_session:
+                    try:
+                        await update_pipeline_stage(
+                            err_session,
+                            pipeline_id,
+                            "compose",
+                            "failed",
+                            error=str(e)[:500],
+                        )
+                        await err_session.commit()
+                    except Exception:
+                        await err_session.rollback()
 
 
 @asynccontextmanager
@@ -41,6 +68,8 @@ async def lifespan(app: FastAPI):
     logger.info("Content Service starting...")
     try:
         await broker.connect()
+        await broker.consume(PIPELINE_COMPOSE_QUEUE, handle_compose_queue_message)
+        logger.info("Consuming from pipeline compose queue")
     except Exception as e:
         logger.warning("Could not connect to RabbitMQ: %s", e)
     yield
@@ -132,6 +161,45 @@ async def list_my_articles(
         status_filter=status_filter,
         author_id=current_user["user_id"],
     )
+
+
+def get_pipeline_service(
+    session: AsyncSession = Depends(get_session),
+) -> PipelineService:
+    return PipelineService(session)
+
+
+@app.post("/content/pipeline", status_code=status.HTTP_201_CREATED)
+async def start_pipeline(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+    service: PipelineService = Depends(get_pipeline_service),
+):
+    """Upload a file (video/audio/image/document/text) and start the unified AI pipeline."""
+    language = request.headers.get("x-interface-language", "ru")
+    return await service.start_pipeline(file, current_user["user_id"], language=language)
+
+
+@app.get("/content/pipeline")
+async def list_pipelines(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+    service: PipelineService = Depends(get_pipeline_service),
+):
+    """List the current user's pipeline runs."""
+    return await service.list_pipelines(current_user["user_id"], page=page, page_size=page_size)
+
+
+@app.get("/content/pipeline/{pipeline_id}")
+async def get_pipeline(
+    pipeline_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    service: PipelineService = Depends(get_pipeline_service),
+):
+    """Get a single pipeline run with stage details."""
+    return await service.get_pipeline(pipeline_id, current_user)
 
 
 @app.get("/content/{article_id}", response_model=ArticleResponse)

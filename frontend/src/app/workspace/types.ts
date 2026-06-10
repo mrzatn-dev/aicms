@@ -15,6 +15,7 @@ export type LocaleCode = 'ru' | 'en' | 'kk';
 export type ActiveTab =
     | 'home'
     | 'articles'
+    | 'pipeline'
     | 'profile'
     | 'history'
     | 'settings'
@@ -294,6 +295,32 @@ export interface AudioResult {
     model_used?: string | null;
     created_at: string;
     updated_at: string;
+}
+
+export interface PipelineStage {
+    name: string;
+    status: 'pending' | 'running' | 'done' | 'failed';
+    started_at?: string | null;
+    finished_at?: string | null;
+    error?: string | null;
+}
+
+export interface PipelineRunItem {
+    id: string;
+    user_id: string;
+    source_type: 'video' | 'audio' | 'image' | 'document' | 'text';
+    original_filename?: string | null;
+    content_type?: string | null;
+    file_size?: number | null;
+    status: 'processing' | 'completed' | 'failed';
+    current_stage: string;
+    stages: PipelineStage[];
+    error?: string | null;
+    article_id?: string | null;
+    transcription_id?: string | null;
+    result_meta?: Record<string, unknown>;
+    created_at?: string | null;
+    updated_at?: string | null;
 }
 
 export interface SupportMessage {

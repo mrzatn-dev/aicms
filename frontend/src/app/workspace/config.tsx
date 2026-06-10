@@ -16,10 +16,12 @@ import {
     ShieldCheck,
     User,
     CreditCard,
+    Workflow,
 } from 'lucide-react';
 
 import { getArticlesCopy } from './articles-i18n';
 import { getWorkspaceCopy } from './i18n';
+import { getPipelineCopy } from './pipeline-i18n';
 import { getSubscriptionCopy } from './subscription-i18n';
 import type { LocaleCode, QuickAction, SidebarItem } from './types';
 
@@ -37,6 +39,7 @@ export const getSidebarItems = (locale: LocaleCode): SidebarItem[] => {
         { id: 'system_monitor', label: copy.sidebar.system_monitor, icon: Server, gradient: 'from-slate-700 to-slate-500', category: 'main' },
         { id: 'support', label: copy.sidebar.support, icon: Headset, gradient: 'from-sky-500 to-cyan-500', category: 'main' },
         { id: 'support_admin', label: copy.sidebar.support_admin, icon: Headset, gradient: 'from-fuchsia-500 to-violet-500', category: 'main' },
+        { id: 'pipeline', label: getPipelineCopy(locale).sidebar, icon: Workflow, gradient: 'from-sky-500 to-violet-500', category: 'ai' },
         { id: 'chat', label: copy.sidebar.chat, icon: MessageSquare, gradient: 'from-emerald-500 to-green-500', category: 'ai' },
         { id: 'validate', label: copy.sidebar.validate, icon: FileCheck, gradient: 'from-amber-500 to-orange-500', category: 'ai' },
         { id: 'document', label: copy.sidebar.document, icon: FileText, gradient: 'from-indigo-500 to-violet-500', category: 'ai' },
@@ -50,6 +53,7 @@ export const getQuickActions = (locale: LocaleCode): QuickAction[] => {
     const copy = getWorkspaceCopy(locale);
     return [
         { id: 'articles', title: getArticlesCopy(locale).sidebar, desc: getArticlesCopy(locale).subtitle, icon: Newspaper, color: 'from-violet-500 to-fuchsia-500' },
+        { id: 'pipeline', title: getPipelineCopy(locale).sidebar, desc: getPipelineCopy(locale).subtitle, icon: Workflow, color: 'from-sky-500 to-violet-500' },
         { id: 'chat', title: copy.quickActions.chat.title, desc: copy.quickActions.chat.desc, icon: MessageSquare, color: 'from-emerald-500 to-green-500' },
         { id: 'validate', title: copy.quickActions.validate.title, desc: copy.quickActions.validate.desc, icon: FileCheck, color: 'from-amber-500 to-orange-500' },
         { id: 'document', title: copy.quickActions.document.title, desc: copy.quickActions.document.desc, icon: FileText, color: 'from-indigo-500 to-violet-500' },

@@ -18,7 +18,7 @@ from shared.broker import broker, VALIDATION_QUEUE
 from shared.analytics_events import publish_analytics_event
 
 from repository import ArticleRepository
-from minio_client import upload_image_to_s3
+from shared.minio_client import upload_image_to_s3
 
 logger = logging.getLogger(__name__)
 

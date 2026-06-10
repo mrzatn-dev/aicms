@@ -11,6 +11,7 @@ import {
     Pencil,
     Plus,
     Search,
+    Sparkles,
     Trash2,
 } from 'lucide-react';
 
@@ -20,6 +21,7 @@ import {
     type Article,
     type ArticleCategory,
 } from '@/lib/content';
+import { AiEditorPanel } from '../AiEditorPanel';
 import { showToast } from '../ToastHost';
 import { getArticlesCopy, statusLabel } from '../../articles-i18n';
 import { getLocaleTag } from '../../i18n';
@@ -65,6 +67,26 @@ export function ArticlesTab({ locale, user, refreshToken = 0 }: ArticlesTabProps
     const [editorMode, setEditorMode] = useState<'edit' | 'preview'>('edit');
     const [coverUrl, setCoverUrl] = useState<string | null>(null);
     const [coverUploading, setCoverUploading] = useState(false);
+    const [aiPanelOpen, setAiPanelOpen] = useState(false);
+
+    const handleAddTagsFromAi = (newTags: string[]) => {
+        setFormTags((prev) => {
+            const existing = prev
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean);
+            const lower = new Set(existing.map((t) => t.toLowerCase()));
+            const merged = [...existing];
+            for (const tag of newTags) {
+                const clean = tag.trim();
+                if (clean && !lower.has(clean.toLowerCase())) {
+                    merged.push(clean);
+                    lower.add(clean.toLowerCase());
+                }
+            }
+            return merged.join(', ');
+        });
+    };
 
     useEffect(() => {
         const t = setTimeout(() => setSearchDebounced(search.trim()), 400);
@@ -268,9 +290,25 @@ export function ArticlesTab({ locale, user, refreshToken = 0 }: ArticlesTabProps
 
             {editorOpen && (
                 <div className="card p-6 space-y-4 border-primary-200">
-                    <h3 className="font-medium text-surface-900">
-                        {editingId ? copy.edit : copy.newArticle}
-                    </h3>
+                    <div className="flex items-center justify-between gap-3">
+                        <h3 className="font-medium text-surface-900">
+                            {editingId ? copy.edit : copy.newArticle}
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => setAiPanelOpen((v) => !v)}
+                            className={`text-xs px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 border transition-colors ${
+                                aiPanelOpen
+                                    ? 'bg-violet-600 text-white border-violet-600'
+                                    : 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100'
+                            }`}
+                        >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            {copy.ai.panelToggle}
+                        </button>
+                    </div>
+                    <div className={aiPanelOpen ? 'grid lg:grid-cols-[minmax(0,1fr),340px] gap-6 items-start' : ''}>
+                    <div className="space-y-4 min-w-0">
                     <div>
                         <label className="block text-sm font-medium text-surface-700 mb-1">{copy.titleLabel}</label>
                         <input
@@ -378,6 +416,21 @@ export function ArticlesTab({ locale, user, refreshToken = 0 }: ArticlesTabProps
                         >
                             {saving ? copy.saving : copy.save}
                         </button>
+                    </div>
+                    </div>
+                    {aiPanelOpen && (
+                        <AiEditorPanel
+                            locale={locale}
+                            title={formTitle}
+                            content={formContent}
+                            onApplyContent={(text) => {
+                                setFormContent(text);
+                                setEditorMode('edit');
+                            }}
+                            onApplyTitle={(title) => setFormTitle(title)}
+                            onAddTags={handleAddTagsFromAi}
+                        />
+                    )}
                     </div>
                 </div>
             )}

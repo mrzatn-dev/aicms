@@ -24,6 +24,7 @@ import { WorkspaceSidebar } from './components/WorkspaceSidebar';
 import { WorkspaceTopBar } from './components/WorkspaceTopBar';
 import { ArticlesTab } from './components/tabs/ArticlesTab';
 import { AudioTab } from './components/tabs/AudioTab';
+import { PipelineTab } from './components/tabs/PipelineTab';
 import { AdminControlTab } from './components/tabs/AdminControlTab';
 import { ChatTab } from './components/tabs/ChatTab';
 import { CsvTab } from './components/tabs/CsvTab';
@@ -1100,6 +1101,10 @@ export default function UnifiedDashboardPage() {
 
                     {activeTab === 'articles' && (
                         <ArticlesTab locale={locale} user={user} refreshToken={articlesRefresh} />
+                    )}
+
+                    {activeTab === 'pipeline' && (
+                        <PipelineTab locale={locale} onOpenArticles={() => setActiveTab('articles')} />
                     )}
 
                     {activeTab === 'profile' && (

@@ -22,6 +22,7 @@ from shared.config import settings
 from shared.database import get_session, async_session_factory
 from shared.schemas.validation import ValidationRequest, ValidationResponse, ValidationRule
 from shared.broker import broker, VALIDATION_QUEUE, AI_ANALYSIS_QUEUE
+from shared.pipeline import update_pipeline_stage
 from shared.auth import require_admin, get_current_user
 from shared.subscription_deps import require_ai_quota
 from shared.service_auth import add_service_auth_middleware
@@ -35,6 +36,7 @@ logger = logging.getLogger(__name__)
 async def handle_validation_message(message: dict) -> None:
     """Handle incoming validation requests from RabbitMQ."""
     logger.info("Received validation request for article: %s", message.get("article_id"))
+    pipeline_id = message.get("pipeline_id")
     async with async_session_factory() as session:
         try:
             validation_service = ValidationService(session)
@@ -48,23 +50,57 @@ async def handle_validation_message(message: dict) -> None:
 
             # If valid, send to AI analysis queue
             if result.valid:
+                if pipeline_id:
+                    await update_pipeline_stage(session, pipeline_id, "validation", "done")
                 try:
-                    await broker.publish(
-                        AI_ANALYSIS_QUEUE,
-                        {
-                            "article_id": str(result.article_id),
-                            "title": message["title"],
-                            "content": message["content"],
-                        },
-                    )
+                    ai_message = {
+                        "article_id": str(result.article_id),
+                        "title": message["title"],
+                        "content": message["content"],
+                    }
+                    if pipeline_id:
+                        ai_message["pipeline_id"] = str(pipeline_id)
+                    await broker.publish(AI_ANALYSIS_QUEUE, ai_message)
+                    if pipeline_id:
+                        await update_pipeline_stage(session, pipeline_id, "ai_analysis", "running")
                     logger.info("Sent article %s to AI analysis", result.article_id)
                 except Exception as e:
                     logger.warning("Failed to send to AI queue: %s", e)
+                    if pipeline_id:
+                        await update_pipeline_stage(
+                            session,
+                            pipeline_id,
+                            "ai_analysis",
+                            "failed",
+                            error=f"Не удалось отправить в очередь AI-анализа: {e}",
+                        )
+            elif pipeline_id:
+                errors = [e.message for e in (result.errors or [])]
+                await update_pipeline_stage(
+                    session,
+                    pipeline_id,
+                    "validation",
+                    "failed",
+                    error="; ".join(errors)[:500] or "Контент не прошёл валидацию",
+                )
 
             await session.commit()
         except Exception as e:
             await session.rollback()
             logger.error("Validation error: %s", e)
+            if pipeline_id:
+                async with async_session_factory() as err_session:
+                    try:
+                        await update_pipeline_stage(
+                            err_session,
+                            pipeline_id,
+                            "validation",
+                            "failed",
+                            error=str(e)[:500],
+                        )
+                        await err_session.commit()
+                    except Exception:
+                        await err_session.rollback()
 
 
 @asynccontextmanager

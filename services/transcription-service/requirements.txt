@@ -10,6 +10,7 @@ python-dotenv==1.0.0
 httpx==0.25.2
 aio-pika==9.4.0
 aiofiles==23.2.1
+miniopy-async
 ffmpeg-python==0.2.0
 python-jose[cryptography]==3.3.0
 bcrypt==4.1.2

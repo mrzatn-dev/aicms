@@ -246,6 +246,14 @@ class AIAnalysisService:
         """Call NLP pipeline to generate SEO metadata."""
         return await self.nlp.generate_seo(content=request_data["content"])
 
+    async def improve_text(self, text: str, mode: str = "style", language: str = "ru") -> dict:
+        """Call NLP pipeline to rewrite/improve text."""
+        return await self.nlp.improve_text(text=text, mode=mode, language=language)
+
+    async def suggest_titles(self, content: str, count: int = 4, language: str = "ru") -> dict:
+        """Call NLP pipeline to suggest titles + meta descriptions."""
+        return await self.nlp.suggest_titles(content=content, count=count, language=language)
+
     async def chat(
         self,
         message: str,
@@ -569,6 +577,7 @@ class AIAnalysisService:
         filename: str,
         file_type: str,
         language: str = "ru",
+        include_text: bool = False,
     ) -> dict:
         """Analyze a text document (PDF, TXT, DOCX) with AI."""
         from fastapi import HTTPException
@@ -691,7 +700,7 @@ class AIAnalysisService:
             content_flags=content_flags,
         )
 
-        return {
+        result = {
             "filename": filename,
             "file_type": file_type,
             "file_size_kb": round(file_size_kb, 1),
@@ -706,3 +715,6 @@ class AIAnalysisService:
             "language": ai_result.get("language", "unknown"),
             "security_verdict": security_verdict,
         }
+        if include_text:
+            result["text_content"] = text_content[:30000]
+        return result

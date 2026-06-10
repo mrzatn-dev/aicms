@@ -30,10 +30,16 @@ from shared.schemas.ai_analysis import (
     AIChatResponse,
     AIValidationRequest,
     AIValidationResponse,
+    AIImproveRequest,
+    AIImproveResponse,
+    AITitlesRequest,
+    AITitlesResponse,
     CSVAnalysisResponse,
     ImageAnalysisResponse,
 )
-from shared.broker import broker, AI_ANALYSIS_QUEUE
+from shared.broker import broker, AI_ANALYSIS_QUEUE, PIPELINE_MEDIA_QUEUE, PIPELINE_COMPOSE_QUEUE
+from shared.minio_client import download_media_bytes
+from shared.pipeline import update_pipeline_stage
 from shared.auth import require_admin, get_current_user, require_user_or_internal
 from shared.subscription_deps import require_ai_quota, require_ai_quota_or_internal
 from shared.service_auth import add_service_auth_middleware
@@ -47,6 +53,7 @@ logger = logging.getLogger(__name__)
 async def handle_analysis_message(message: dict) -> None:
     """Handle incoming AI analysis requests from RabbitMQ."""
     logger.info("Received AI analysis request for article: %s", message.get("article_id"))
+    pipeline_id = message.get("pipeline_id")
     async with async_session_factory() as session:
         try:
             ai_service = AIAnalysisService(session)
@@ -55,12 +62,144 @@ async def handle_analysis_message(message: dict) -> None:
                 title=message["title"],
                 content=message["content"],
             )
-            await ai_service.analyze_content(request)
+            result = await ai_service.analyze_content(request)
+            if pipeline_id:
+                await update_pipeline_stage(
+                    session,
+                    pipeline_id,
+                    "ai_analysis",
+                    "done",
+                    merge_meta={
+                        "category": result.category,
+                        "quality_score": result.quality_score,
+                        "toxicity_score": result.toxicity_score,
+                    },
+                )
+                # analyze_content auto-publishes the article
+                await update_pipeline_stage(session, pipeline_id, "publish", "done")
             await session.commit()
             logger.info("AI analysis completed for article %s", message["article_id"])
         except Exception as e:
             await session.rollback()
             logger.error("AI analysis error: %s", e)
+            if pipeline_id:
+                async with async_session_factory() as err_session:
+                    try:
+                        await update_pipeline_stage(
+                            err_session,
+                            pipeline_id,
+                            "ai_analysis",
+                            "failed",
+                            error=str(e)[:500],
+                        )
+                        await err_session.commit()
+                    except Exception:
+                        await err_session.rollback()
+
+
+_MEDIA_ARTICLE_LABELS = {
+    "ru": {"details": "Параметры файла", "recommendations": "Рекомендации", "file": "Файл", "format": "Формат", "dimensions": "Размер", "volume": "Объём", "words": "Слов", "category": "Категория"},
+    "en": {"details": "File details", "recommendations": "Recommendations", "file": "File", "format": "Format", "dimensions": "Dimensions", "volume": "Size", "words": "Words", "category": "Category"},
+    "kk": {"details": "Файл параметрлері", "recommendations": "Ұсыныстар", "file": "Файл", "format": "Формат", "dimensions": "Өлшемі", "volume": "Көлемі", "words": "Сөздер", "category": "Санат"},
+}
+
+
+async def handle_pipeline_media_message(message: dict) -> None:
+    """RabbitMQ consumer: analyze an image/document for the unified AI pipeline."""
+    pipeline_id = message.get("pipeline_id")
+    source_type = message.get("source_type", "document")
+    language = message.get("language", "ru")
+    filename = message.get("original_filename") or "file"
+    labels = _MEDIA_ARTICLE_LABELS.get(language, _MEDIA_ARTICLE_LABELS["ru"])
+    logger.info("Pipeline media analysis request: %s (%s)", pipeline_id, source_type)
+
+    async with async_session_factory() as session:
+        try:
+            await update_pipeline_stage(session, pipeline_id, "media_analysis", "running")
+            await session.commit()
+
+            content = await download_media_bytes(message["object_key"])
+            ai_service = AIAnalysisService(session)
+
+            tags: list[str] = []
+            if source_type == "image":
+                result = await ai_service.analyze_image(content, filename, language=language)
+                summary = result.get("ai_summary", "")
+                body_lines = [
+                    f"## {labels['details']}",
+                    f"- {labels['file']}: {filename}",
+                    f"- {labels['format']}: {result.get('format', '?')}",
+                    f"- {labels['dimensions']}: {result.get('width', 0)}×{result.get('height', 0)} px",
+                    f"- {labels['volume']}: {result.get('file_size_kb', 0)} KB",
+                ]
+                recommendations = result.get("ai_recommendations", [])
+            else:
+                ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ".txt"
+                result = await ai_service.analyze_document(
+                    content, filename, ext, language=language, include_text=True
+                )
+                summary = result.get("ai_summary", "")
+                text_content = (result.get("text_content") or "").strip()
+                body_lines = []
+                if text_content:
+                    body_lines.append(text_content)
+                body_lines += [
+                    "",
+                    f"## {labels['details']}",
+                    f"- {labels['file']}: {filename}",
+                    f"- {labels['volume']}: {result.get('file_size_kb', 0)} KB",
+                    f"- {labels['words']}: {result.get('word_count', 0)}",
+                    f"- {labels['category']}: {result.get('content_category', 'unknown')}",
+                ]
+                recommendations = result.get("ai_recommendations", [])
+                category = (result.get("content_category") or "").strip()
+                if category and category.lower() != "unknown":
+                    tags.append(category.lower())
+
+            if recommendations:
+                body_lines += ["", f"## {labels['recommendations']}"]
+                body_lines += [f"- {rec}" for rec in recommendations]
+
+            await update_pipeline_stage(
+                session,
+                pipeline_id,
+                "media_analysis",
+                "done",
+                merge_meta={"media_summary": summary},
+            )
+            await session.commit()
+
+            await broker.publish(
+                PIPELINE_COMPOSE_QUEUE,
+                {
+                    "pipeline_id": str(pipeline_id),
+                    "user_id": message["user_id"],
+                    "source_type": source_type,
+                    "original_filename": filename,
+                    "language": language,
+                    "title": None,
+                    "content": "\n".join(body_lines).strip(),
+                    "summary": summary,
+                    "tags": tags,
+                },
+            )
+            logger.info("Pipeline %s: media analysis done, sent to compose", pipeline_id)
+        except Exception as e:
+            await session.rollback()
+            logger.error("Pipeline media analysis failed for %s: %s", pipeline_id, e)
+            if pipeline_id:
+                async with async_session_factory() as err_session:
+                    try:
+                        await update_pipeline_stage(
+                            err_session,
+                            pipeline_id,
+                            "media_analysis",
+                            "failed",
+                            error=str(e)[:500],
+                        )
+                        await err_session.commit()
+                    except Exception:
+                        await err_session.rollback()
 
 
 @asynccontextmanager
@@ -70,7 +209,8 @@ async def lifespan(app: FastAPI):
     try:
         await broker.connect()
         await broker.consume(AI_ANALYSIS_QUEUE, handle_analysis_message)
-        logger.info("Consuming from AI analysis queue")
+        await broker.consume(PIPELINE_MEDIA_QUEUE, handle_pipeline_media_message)
+        logger.info("Consuming from AI analysis and pipeline media queues")
     except Exception as e:
         logger.warning("Could not connect to RabbitMQ: %s", e)
     yield
@@ -158,6 +298,38 @@ async def generate_seo(
 ):
     """Generate SEO metadata via DeepSeek."""
     return await service.generate_seo(request.model_dump())
+
+
+@app.post("/assist/improve", response_model=AIImproveResponse)
+async def assist_improve(
+    request: AIImproveRequest,
+    current_user: dict = Depends(require_ai_quota),
+    service: AIAnalysisService = Depends(get_ai_service),
+):
+    """Improve/rewrite article text (style, clarity, shorten, expand)."""
+    if not request.text or len(request.text.strip()) < 10:
+        raise HTTPException(status_code=400, detail="Текст слишком короткий для улучшения (минимум 10 символов)")
+    return await service.improve_text(
+        text=request.text,
+        mode=request.mode,
+        language=request.language,
+    )
+
+
+@app.post("/assist/titles", response_model=AITitlesResponse)
+async def assist_titles(
+    request: AITitlesRequest,
+    current_user: dict = Depends(require_ai_quota),
+    service: AIAnalysisService = Depends(get_ai_service),
+):
+    """Suggest titles + meta descriptions for article content."""
+    if not request.content or len(request.content.strip()) < 30:
+        raise HTTPException(status_code=400, detail="Слишком мало контента для генерации заголовков (минимум 30 символов)")
+    return await service.suggest_titles(
+        content=request.content,
+        count=request.count,
+        language=request.language,
+    )
 
 
 @app.post("/chat", response_model=AIChatResponse)

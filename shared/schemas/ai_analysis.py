@@ -48,6 +48,37 @@ class AISEOResponse(BaseModel):
     keywords: list[str]
 
 
+class AIImproveRequest(BaseModel):
+    """Schema for AI text improvement request."""
+    text: str
+    mode: str = "style"  # style | clarity | shorten | expand
+    language: str = "ru"
+
+
+class AIImproveResponse(BaseModel):
+    """Schema for AI text improvement response."""
+    improved_text: str
+    changes: list[str] = []
+
+
+class AITitleSuggestion(BaseModel):
+    """A single title + meta description suggestion."""
+    title: str
+    meta_description: str = ""
+
+
+class AITitlesRequest(BaseModel):
+    """Schema for AI title suggestions request."""
+    content: str
+    count: int = 4
+    language: str = "ru"
+
+
+class AITitlesResponse(BaseModel):
+    """Schema for AI title suggestions response."""
+    suggestions: list[AITitleSuggestion] = []
+
+
 class AIChatMessage(BaseModel):
     """A single chat message."""
     role: str  # 'user' or 'assistant'

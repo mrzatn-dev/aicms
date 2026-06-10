@@ -269,6 +269,20 @@ services:
         value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
       - key: DEEPSEEK_API_KEY
         sync: false
+      - key: MINIO_ENDPOINT
+        fromService:
+          type: pserv
+          name: aicms-minio
+          property: hostport
+      - key: MINIO_ACCESS_KEY
+        value: minioadmin
+      - key: MINIO_SECRET_KEY
+        fromService:
+          type: pserv
+          name: aicms-minio
+          envVarKey: MINIO_ROOT_PASSWORD
+      - key: MINIO_SECURE
+        value: "false"
       - key: DEBUG
         value: "false"
 
@@ -452,6 +466,20 @@ services:
         value: https://aicms-frontend.onrender.com,https://aicms-9kw6.onrender.com
       - key: OPENAI_API_KEY
         sync: false
+      - key: MINIO_ENDPOINT
+        fromService:
+          type: pserv
+          name: aicms-minio
+          property: hostport
+      - key: MINIO_ACCESS_KEY
+        value: minioadmin
+      - key: MINIO_SECRET_KEY
+        fromService:
+          type: pserv
+          name: aicms-minio
+          envVarKey: MINIO_ROOT_PASSWORD
+      - key: MINIO_SECURE
+        value: "false"
       - key: DEBUG
         value: "false"
 

@@ -167,6 +167,9 @@ class MinioSettings(BaseSettings):
     MINIO_SECRET_KEY: str = Field(default="minioadmin", description="Minio secret key")
     MINIO_SECURE: bool = Field(default=False, description="Use HTTPS for Minio")
     MINIO_BUCKET_IMAGES: str = Field(default="cms-images", description="Bucket for images")
+    MINIO_BUCKET_MEDIA: str = Field(
+        default="cms-media", description="Bucket for AI pipeline media files (video/audio/docs)"
+    )
     MINIO_PUBLIC_URL: str | None = Field(
         default=None,
         description="Public base URL for uploaded objects (e.g. http://localhost:9000)",

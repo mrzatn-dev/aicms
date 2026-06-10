@@ -156,6 +156,11 @@ VALIDATION_QUEUE = "content.validation"
 AI_ANALYSIS_QUEUE = "content.ai_analysis"
 ANALYTICS_QUEUE = "analytics.events"
 
+# Unified AI pipeline queues
+PIPELINE_TRANSCRIBE_QUEUE = "pipeline.transcribe"
+PIPELINE_MEDIA_QUEUE = "pipeline.analyze_media"
+PIPELINE_COMPOSE_QUEUE = "pipeline.compose"
+
 
 # Singleton
 broker = MessageBroker()

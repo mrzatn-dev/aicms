@@ -214,6 +214,121 @@ class NLPPipeline:
             logger.exception("Error during DeepSeek SEO generation: %s", str(e))
             return {"title": "", "meta_description": str(e), "keywords": []}
 
+    async def improve_text(self, text: str, mode: str = "style", language: str = "ru") -> dict:
+        """Rewrite/improve article text in a given mode (style, clarity, shorten, expand)."""
+        target_language = "English" if language == "en" else "Kazakh" if language == "kk" else "Russian"
+        if not self.client:
+            return {
+                "improved_text": text,
+                "changes": ["AI unavailable: DEEPSEEK_API_KEY is not configured"],
+            }
+
+        mode_instructions = {
+            "style": "Improve the writing style: make it more engaging, professional and fluent. Fix awkward phrasing, grammar and punctuation.",
+            "clarity": "Improve clarity: simplify complex sentences, remove ambiguity, make the text easy to understand without losing meaning.",
+            "shorten": "Make the text more concise: remove redundancy and filler while preserving all key information. Target roughly 60-70% of the original length.",
+            "expand": "Expand the text: add helpful detail, examples and smooth transitions while keeping the original message and structure.",
+        }
+        instruction = mode_instructions.get(mode, mode_instructions["style"])
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert editor for a Content Management System. "
+                    f"You rewrite article text. Keep Markdown formatting if present. "
+                    f"The rewritten text must be in the same language as the original text. "
+                    f"Write the list of changes in {target_language}. "
+                    "Always respond with valid JSON only."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Task: {instruction}\n\n"
+                    f"Text:\n{text[:15000]}\n\n"
+                    f"Return ONLY a JSON object with this schema:\n"
+                    f'{{"improved_text": "The full rewritten text", '
+                    f'"changes": ["Short bullet list of the main changes you made (3-6 items)"]}}'
+                ),
+            },
+        ]
+
+        try:
+            raw = await self._chat(messages, response_format={"type": "json_object"})
+            result = json.loads(raw)
+            improved = result.get("improved_text") or text
+            changes = result.get("changes", [])
+            if not isinstance(changes, list):
+                changes = []
+            return {"improved_text": improved, "changes": [str(c) for c in changes]}
+        except APIStatusError as e:
+            msg = "Недостаточно средств на балансе API (402)." if e.status_code == 402 else f"Ошибка API: {e.status_code}"
+            logger.error("DeepSeek API Error during text improvement: %s", msg)
+            return {"improved_text": text, "changes": [msg]}
+        except Exception as e:
+            logger.exception("Error during DeepSeek text improvement: %s", str(e))
+            return {"improved_text": text, "changes": [f"Ошибка: {str(e)[:100]}"]}
+
+    async def suggest_titles(self, content: str, count: int = 4, language: str = "ru") -> dict:
+        """Suggest title + meta description pairs for the given article content."""
+        target_language = "English" if language == "en" else "Kazakh" if language == "kk" else "Russian"
+        if not self.client:
+            return {
+                "suggestions": [
+                    {
+                        "title": "AI unavailable (DEEPSEEK_API_KEY not configured)",
+                        "meta_description": "",
+                    }
+                ]
+            }
+
+        count = max(1, min(count, 8))
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert copywriter and SEO specialist. "
+                    f"Generate titles and meta descriptions in {target_language} "
+                    "unless the article is clearly written in another language - then match the article's language. "
+                    "Always respond with valid JSON only."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Read the following article content and suggest {count} alternative headline options.\n\n"
+                    f"Content:\n{content[:15000]}\n\n"
+                    f"Return ONLY a JSON object with this schema:\n"
+                    f'{{"suggestions": [{{"title": "Catchy, SEO-friendly title (max 70 chars)", '
+                    f'"meta_description": "Compelling meta description for search engines (max 160 chars)"}}]}}'
+                ),
+            },
+        ]
+
+        try:
+            raw = await self._chat(messages, response_format={"type": "json_object"})
+            result = json.loads(raw)
+            suggestions = result.get("suggestions", [])
+            if not isinstance(suggestions, list):
+                suggestions = []
+            cleaned = [
+                {
+                    "title": str(s.get("title", ""))[:120],
+                    "meta_description": str(s.get("meta_description", ""))[:200],
+                }
+                for s in suggestions
+                if isinstance(s, dict) and s.get("title")
+            ]
+            return {"suggestions": cleaned[:count]}
+        except APIStatusError as e:
+            msg = "Недостаточно средств на балансе API (402)." if e.status_code == 402 else f"Ошибка API: {e.status_code}"
+            logger.error("DeepSeek API Error during title suggestion: %s", msg)
+            return {"suggestions": [{"title": msg, "meta_description": ""}]}
+        except Exception as e:
+            logger.exception("Error during DeepSeek title suggestion: %s", str(e))
+            return {"suggestions": [{"title": f"Ошибка: {str(e)[:80]}", "meta_description": ""}]}
+
     async def _build_chat_messages(
         self,
         message: str,

@@ -39,6 +39,38 @@ export type ArticlesCopy = {
     uploadCover: string;
     uploadingCover: string;
     status: Record<string, string>;
+    ai: {
+        panelToggle: string;
+        panelTitle: string;
+        panelHint: string;
+        improveSection: string;
+        improveModes: Record<string, string>;
+        improveButton: string;
+        improving: string;
+        applyImproved: string;
+        discardImproved: string;
+        changesTitle: string;
+        improvedPreview: string;
+        titlesSection: string;
+        titlesButton: string;
+        titlesLoading: string;
+        applyTitle: string;
+        metaLabel: string;
+        seoSection: string;
+        seoButton: string;
+        seoLoading: string;
+        keywordsLabel: string;
+        addKeywordsToTags: string;
+        checkSection: string;
+        checkButton: string;
+        checking: string;
+        scoreLabel: string;
+        issuesLabel: string;
+        suggestionsLabel: string;
+        validOk: string;
+        tooShort: string;
+        error: string;
+    };
 };
 
 const copy: Record<LocaleCode, ArticlesCopy> = {
@@ -88,6 +120,43 @@ const copy: Record<LocaleCode, ArticlesCopy> = {
             published: 'Опубликовано',
             rejected: 'Отклонено',
         },
+        ai: {
+            panelToggle: 'AI-ассистент',
+            panelTitle: 'AI-ассистент редактора',
+            panelHint: 'Улучшение текста, заголовки, SEO и проверка перед публикацией.',
+            improveSection: 'Улучшение текста',
+            improveModes: {
+                style: 'Стиль',
+                clarity: 'Ясность',
+                shorten: 'Сократить',
+                expand: 'Расширить',
+            },
+            improveButton: 'Улучшить текст',
+            improving: 'Улучшаю…',
+            applyImproved: 'Применить',
+            discardImproved: 'Отклонить',
+            changesTitle: 'Что изменилось',
+            improvedPreview: 'Улучшенная версия',
+            titlesSection: 'Заголовки и мета-описания',
+            titlesButton: 'Предложить заголовки',
+            titlesLoading: 'Генерация…',
+            applyTitle: 'Использовать',
+            metaLabel: 'Мета-описание',
+            seoSection: 'SEO-рекомендации',
+            seoButton: 'Анализировать SEO',
+            seoLoading: 'Анализ…',
+            keywordsLabel: 'Ключевые слова',
+            addKeywordsToTags: 'Добавить в теги',
+            checkSection: 'Проверка контента',
+            checkButton: 'Проверить',
+            checking: 'Проверка…',
+            scoreLabel: 'Оценка',
+            issuesLabel: 'Замечания',
+            suggestionsLabel: 'Рекомендации',
+            validOk: 'Контент выглядит хорошо',
+            tooShort: 'Сначала напишите текст статьи (минимум 30 символов).',
+            error: 'Ошибка AI-запроса',
+        },
     },
     en: {
         sidebar: 'Articles',
@@ -135,6 +204,43 @@ const copy: Record<LocaleCode, ArticlesCopy> = {
             published: 'Published',
             rejected: 'Rejected',
         },
+        ai: {
+            panelToggle: 'AI assistant',
+            panelTitle: 'Editor AI assistant',
+            panelHint: 'Text improvement, titles, SEO and pre-publish checks.',
+            improveSection: 'Text improvement',
+            improveModes: {
+                style: 'Style',
+                clarity: 'Clarity',
+                shorten: 'Shorten',
+                expand: 'Expand',
+            },
+            improveButton: 'Improve text',
+            improving: 'Improving…',
+            applyImproved: 'Apply',
+            discardImproved: 'Discard',
+            changesTitle: 'What changed',
+            improvedPreview: 'Improved version',
+            titlesSection: 'Titles & meta descriptions',
+            titlesButton: 'Suggest titles',
+            titlesLoading: 'Generating…',
+            applyTitle: 'Use',
+            metaLabel: 'Meta description',
+            seoSection: 'SEO recommendations',
+            seoButton: 'Analyze SEO',
+            seoLoading: 'Analyzing…',
+            keywordsLabel: 'Keywords',
+            addKeywordsToTags: 'Add to tags',
+            checkSection: 'Content check',
+            checkButton: 'Check',
+            checking: 'Checking…',
+            scoreLabel: 'Score',
+            issuesLabel: 'Issues',
+            suggestionsLabel: 'Suggestions',
+            validOk: 'Content looks good',
+            tooShort: 'Write the article text first (at least 30 characters).',
+            error: 'AI request failed',
+        },
     },
     kk: {
         sidebar: 'Мақалалар',
@@ -181,6 +287,43 @@ const copy: Record<LocaleCode, ArticlesCopy> = {
             analyzing: 'AI талдау',
             published: 'Жарияланған',
             rejected: 'Қабылданбаған',
+        },
+        ai: {
+            panelToggle: 'AI көмекші',
+            panelTitle: 'Редактордың AI көмекшісі',
+            panelHint: 'Мәтінді жақсарту, тақырыптар, SEO және жариялау алдындағы тексеру.',
+            improveSection: 'Мәтінді жақсарту',
+            improveModes: {
+                style: 'Стиль',
+                clarity: 'Анықтық',
+                shorten: 'Қысқарту',
+                expand: 'Кеңейту',
+            },
+            improveButton: 'Мәтінді жақсарту',
+            improving: 'Жақсартылуда…',
+            applyImproved: 'Қолдану',
+            discardImproved: 'Қабылдамау',
+            changesTitle: 'Не өзгерді',
+            improvedPreview: 'Жақсартылған нұсқа',
+            titlesSection: 'Тақырыптар мен мета-сипаттамалар',
+            titlesButton: 'Тақырып ұсыну',
+            titlesLoading: 'Генерация…',
+            applyTitle: 'Қолдану',
+            metaLabel: 'Мета-сипаттама',
+            seoSection: 'SEO ұсыныстары',
+            seoButton: 'SEO талдау',
+            seoLoading: 'Талдау…',
+            keywordsLabel: 'Кілт сөздер',
+            addKeywordsToTags: 'Тегтерге қосу',
+            checkSection: 'Контентті тексеру',
+            checkButton: 'Тексеру',
+            checking: 'Тексерілуде…',
+            scoreLabel: 'Баға',
+            issuesLabel: 'Ескертулер',
+            suggestionsLabel: 'Ұсыныстар',
+            validOk: 'Контент жақсы көрінеді',
+            tooShort: 'Алдымен мақала мәтінін жазыңыз (кемінде 30 таңба).',
+            error: 'AI сұранысы сәтсіз аяқталды',
         },
     },
 };
